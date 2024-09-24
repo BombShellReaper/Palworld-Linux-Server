@@ -1,5 +1,7 @@
 # Palworld server
 This is a step-by-step guide on how to set up and run a Ubuntu Palworld server.
+
+**Disclaimer:** The directories or sub directories might differ from your set-up.
 # Update, Upgrade, & Cleanup
     sudo apt update
     sudo apt full-upgrade -y
@@ -21,15 +23,15 @@ or
     sudo apt install ufw -y
 # UFW: Allow Server and Query Ports
     sudo ufw allow from any proto udp to any port 8211 comment "Palworld Server Port"
-Note: **To make this more secure you can change the "any" in "from any" to an IP address or to a range of address**
+**Note:** To make this more secure you can change the "any" in "from any" to an IP address or to a range of address.
 
     sudo ufw allow from any proto udp to any port 27015 comment "Palworld Query Port"
 
-**Note:** To make this more secure you can change the "any" in "from any" to an IP address or to a range of address
+**Note:** To make this more secure you can change the "any" in "from any" to an IP address or to a range of address.
 # Allow SSH connections through the UFW (Optional)
     sudo ufw allow from any to any port 22 comment "SSH"
 
-**Note:** To make this more secure you can change the "any" in "from any" to an IP address to a range of address
+**Note:** To make this more secure you can change the "any" in "from any" to an IP address to a range of address.
 # Enable UFW (UFW will enable on reboot)
     sudo ufw enable
 --------------------------------------------------------------------------------
@@ -64,11 +66,11 @@ Press "**Ctrl**" & "**C**" simultaneously.
 
 **Notice:** There are settings from above that you need to edit: ServerName="", ServerDescription="" (this is optional), AdminPassword="" (this is optional), ServerPassword="" (this is optional), and PublicIP="". You can edit more settings here, but these are the ones I recommend starting with.
 
-**Notice:** The file should have two lines and if you use nano it should look something like this
+**Notice:** The file should have two lines and if you use nano it should look something like this.
 
 ![image](https://github.com/user-attachments/assets/d70a4090-249a-4c59-9c3c-325a78cc7644)
 
-**Note:** You can also find the PalWorldSettings.ini settings at the following location
+**Note:** You can also find the PalWorldSettings.ini settings at the following location.
 
     nano /home/steam/.steam/steamapps/common/PalServer/DefaultPalWorldSettings.ini
 -------------------------------------------------------------------------------
@@ -97,9 +99,9 @@ Press "**Ctrl**" & "**C**" simultaneously.
     WantedBy=multi-user.target
 
 # Save and Exit the Service File
-1. Press "**Ctrl**" + "**X**" on your keyboard
+1. Press "**Ctrl**" & "**X**" simultaneously.
 
-2. Type: "**Y**' & press the **Enter** key
+2. Type: "**Y**', then press the **Enter** key.
 # Reload daemon
     sudo systemctl daemon-reload
 # Enable PalWorld.service
