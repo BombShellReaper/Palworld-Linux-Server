@@ -68,7 +68,7 @@ Press "**Ctrl**" & "**C**" on your keyboard at the same time.
 
 ![image](https://github.com/user-attachments/assets/d70a4090-249a-4c59-9c3c-325a78cc7644)
 
-**Note:** You can also fine the PalWorldSettings.ini located here
+**Note:** You can also fine the PalWorldSettings.ini settings located here
 
     nano /home/steam/.steam/steamapps/common/PalServer/DefaultPalWorldSettings.ini
 
