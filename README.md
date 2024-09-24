@@ -1,4 +1,4 @@
-# Palworld Server Setup Guide
+# Palworld Linux Server Setup Guide
 
 **Overview**
 
