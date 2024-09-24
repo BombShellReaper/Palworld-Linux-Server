@@ -33,7 +33,7 @@ Note: **To make this more secure you can change the "any" in "from any" to an IP
 # Enable UFW (UFW will enable on reboot)
     sudo ufw enable
 --------------------------------------------------------------------------------
-# Make a steam user (Two options on how to complete this)
+# Make a steam user (Two Options)
     sudo useradd -m steam
 
     sudo passwd steam
