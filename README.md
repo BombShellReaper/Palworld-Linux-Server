@@ -1,6 +1,6 @@
 # Palworld server
-This is the step-by-step on how to setup and run a Ubuntu Palworld server.
-# Update-Upgrade-Clean_up
+This is a step-by-step guide on how to set up and run a Ubuntu Palworld server.
+# Update, Upgrade, & Cleanup
     sudo apt update
     sudo apt full-upgrade -y
     sudo apt autoremove -y
@@ -11,7 +11,7 @@ or
 # Dependencies
     sudo add-apt-repository multiverse
     sudo dpkg --add-architecture i386; sudo apt update
-# Install screen
+# Install screen (Session Manager)
     sudo apt install screen -Y
 # Update
     sudo apt update
@@ -19,7 +19,7 @@ or
     sudo apt install steamcmd -y
 # Install UFW (Firewall)
     sudo apt install ufw -y
-# UFW allow server port & server Query Port
+# UFW: Allow Server and Query Ports
     sudo ufw allow from any proto udp to any port 8211 comment "Palworld Server Port"
 Note: **To make this more secure you can change the "any" in "from any" to an IP address or to a range of address**
 
@@ -33,7 +33,7 @@ Note: **To make this more secure you can change the "any" in "from any" to an IP
 # Enable UFW (UFW will enable on reboot)
     sudo ufw enable
 --------------------------------------------------------------------------------
-# Make a steam user (Two Options)
+# Make a Steam User (Two Options)
     sudo useradd -m steam
 
     sudo passwd steam
@@ -41,7 +41,7 @@ Note: **To make this more secure you can change the "any" in "from any" to an IP
 or
 
     sudo adduser steam 
-This will prompt you through the set-up
+This will prompt you through the setup
 -------------------------------------------------------------------------------
 # Switch to the steam user
     su steam
@@ -54,7 +54,7 @@ This will prompt you through the set-up
 # Run the server to create the server files
     ./PalServer.sh -useperfthreads -NoAsyncLoadingThread -UseMultithreadForDS
 # Stop the server
-Press "**Ctrl**" & "**C**" on your keyboard at the same time.
+Press "**Ctrl**" & "**C**" simultaneously.
 # Edit the PalWorldSettings.ini
     nano Pal/Saved/Config/LinuxServer/PalWorldSettings.ini
 **ADD THE FOLLOWING TO THE FILE**
@@ -68,19 +68,46 @@ Press "**Ctrl**" & "**C**" on your keyboard at the same time.
 
 ![image](https://github.com/user-attachments/assets/d70a4090-249a-4c59-9c3c-325a78cc7644)
 
-**Note:** You can also fine the PalWorldSettings.ini settings located here
+**Note:** You can also find the PalWorldSettings.ini settings at the following location
 
     nano /home/steam/.steam/steamapps/common/PalServer/DefaultPalWorldSettings.ini
+-------------------------------------------------------------------------------
+# Create a systemd service to auto start the server (Optional)
+# Exit the user steam
+    exit
+# Make the service
+    sudo nano /etc/systemd/system/PalWorld.service
+# Copy and edit per your needs/wants
+    [Unit]
+    Description=PalWorld Server
+    After=network.target
 
+    [Service]
+    Type=forking
+    WorkingDirectory=/home/steam/.steam/steamapps/common/PalServer
+    ExecStart=/usr/bin/screen -dmS PalWord /home/steam/.steam/steamapps/common/PalServer/./PalServer.sh -useperfthreads -NoAsyncLoadingThread -UseMultithreadForDS -PublicLobby
+    RemainAfterExit=yes
+    Restart=on-failure
+    RestartSec=5
+    User=steam
+    StandardOutput=journal+console
+    StandardError=journal+console
 
+    [Install]
+    WantedBy=multi-user.target
 
+# Save and Exit the Service File
+1. Press "**Ctrl**" + "**X**" on your keyboard
 
+2. Type: "**Y**' & press the **Enter** key
+# Reload daemon
+    sudo systemctl daemon-reload
+# Enable PalWorld.service
+    sudo systemctl enable PalWorld.service
+# Start PalWorld.service
+    sudo systemctl start PalWorld.service
 
-
-
-
-
-
+**End of Instructions. Thank you for following this guide**
 -------------------------------------------------------------------------------
 # References
 1.     https://developer.valvesoftware.com/wiki/SteamCMD#Linux
