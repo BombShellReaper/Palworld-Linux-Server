@@ -60,7 +60,7 @@ Directory structures may differ based on your specific setup.
     sudo ufw enable
     
 --------------------------------------------------------------------------------
-# Step 4: Creat a Steam User
+# Step 4: Create a Steam User
 
     sudo adduser steam 
 
