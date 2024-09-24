@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #You will to run this with sudo
-This only completes step 1,2, & 7
+#This only completes step 1,2, & 7
 
 # Logging function
 log() {
