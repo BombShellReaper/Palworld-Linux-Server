@@ -116,7 +116,7 @@ PublicIP=""
 
 **Notice:** The file should have two lines and if you use nano it should look something like this.
 
-![image](https://github.com/user-attachments/assets/d70a4090-249a-4c59-9c3c-325a78cc7644)
+![image](https://github.com/user-attachments/assets/3efb9777-25d3-49ec-8846-e56372c564f0)
 
 **Note:** You can also find the PalWorldSettings.ini settings at the following location.
 
