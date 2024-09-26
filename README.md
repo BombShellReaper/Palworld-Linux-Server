@@ -55,7 +55,7 @@ Directory structures may differ based on your specific setup.
 
 **Note:** To make this more secure you can change the "any" in "from any" to an IP address to a range of address.
 
-Use the defsult rule to **deny** incoming traffic **(Optional)**
+Use the default rule to **deny** incoming traffic **(Optional)**
 
     sudo ufw default deny incoming
 
