@@ -55,9 +55,9 @@ Directory structures may differ based on your specific setup.
 
 **Note:** To make this more secure you can change the "any" in "from any" to an IP address to a range of address.
 
-Use the defualt rule to **deny** incoming traffice **(Optional)**
+Use the defsult rule to **deny** incoming traffic **(Optional)**
 
-    sudo ufw defualt deny incoming
+    sudo ufw default deny incoming
 
 **Enable UFW** (UFW will enable on reboot)
 
@@ -142,7 +142,7 @@ Add the following configuration
     [Service]
     Type=forking
     WorkingDirectory=/home/steam/.steam/steamapps/common/PalServer
-    ExecStart=/usr/bin/screen -dmS PalWord /home/steam/.steam/steamapps/common/PalServer/./PalServer.sh -useperfthreads -NoAsyncLoadingThread -UseMultithreadForDS -PublicLobby
+    ExecStart=/usr/bin/screen -dmS PalWorld /home/steam/.steam/steamapps/common/PalServer/./PalServer.sh -useperfthreads -NoAsyncLoadingThread -UseMultithreadForDS -PublicLobby
     RemainAfterExit=yes
     Restart=on-failure
     RestartSec=5
