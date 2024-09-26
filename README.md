@@ -41,13 +41,13 @@ Directory structures may differ based on your specific setup.
 
 # Step 3: Configure UFW (Uncomplicated Firewall)
 
-This will allow all connection from anywhere to connect to port 8211 on the host machine
+This rule allows all incoming connections to port 8211 on the host machine
 
     sudo ufw allow from any proto udp to any port 8211 comment "Palworld Server Port"
 
 **Note:** To make this more secure you can change the "any" in "from any" to an IP address or to a range of address.
 
-This will allow all connection from anywhere to connect to port 27015 on the host machine
+This rule allows all incoming connections to port 27015 on the host machine
 
     sudo ufw allow from any proto udp to any port 27015 comment "Palworld Query Port"
 
