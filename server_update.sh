@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # This is a script to update and reboot the server
-# Uncommnet anu of the following commands to allow them to run
+# Uncommnet any of the following commands to allow them to run
 
 # Update package list
 # apt update 
