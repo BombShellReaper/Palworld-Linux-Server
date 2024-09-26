@@ -55,6 +55,10 @@ Directory structures may differ based on your specific setup.
 
 **Note:** To make this more secure you can change the "any" in "from any" to an IP address to a range of address.
 
+Use the defualt rule to **deny** incoming traffice **(Optional)**
+
+    sudo ufw defualt deny incoming
+
 **Enable UFW** (UFW will enable on reboot)
 
     sudo ufw enable
