@@ -1,4 +1,4 @@
- #!/bin/bash
+#!/bin/bash
 
 # This script will update the server, but you might have to make edits to the dir path
 
