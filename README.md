@@ -140,19 +140,19 @@ PublicIP=""
 Add the following configuration
 
     [Unit]
-    Description=PalWorld Server
+    Description=Your Application Description
     After=network.target
 
     [Service]
-    Type=forking
-    WorkingDirectory=/home/steam/.steam/steamapps/common/PalServer
-    ExecStart=/usr/bin/screen -dmS PalWorld /home/steam/.steam/steamapps/common/PalServer/./PalServer.sh -useperfthreads -NoAsyncLoadingThread -UseMultithreadForDS -PublicLobby
+    Type=simple
+    User=youruser
+    WorkingDirectory=/path/to/your/app
+    ExecStart=/path/to/your/app/your-executable.sh
     RemainAfterExit=yes
     Restart=on-failure
     RestartSec=5
-    User=steam
-    StandardOutput=journal+console
-    StandardError=journal+console
+    StandardOutput=append:/var/log/yourapp.log
+    StandardError=append:/var/log/yourapp.log
 
     [Install]
     WantedBy=multi-user.target
