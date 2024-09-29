@@ -1,1 +1,1 @@
-Location /steamapps/common/PalServer/Pal/Saved/Config/LinuxServer$
+Location /steamapps/common/PalServer/Pal/Saved/Config/LinuxServer/Engine.ini
