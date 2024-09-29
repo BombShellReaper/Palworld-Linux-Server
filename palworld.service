@@ -1,0 +1,26 @@
+# Generic Systemd Service Template
+
+This document provides a template for creating a systemd service file. You can customize it for your specific application.
+
+## Service File Template
+
+Create a new file named `your-service.service` in your systemd directory (typically `/etc/systemd/system/`):
+
+```ini
+[Unit]
+Description=Your Application Description
+After=network.target
+
+[Service]
+Type=simple
+User=youruser
+WorkingDirectory=/path/to/your/app
+ExecStart=/path/to/your/app/your-executable.sh
+RemainAfterExit=yes
+Restart=on-failure
+RestartSec=5
+StandardOutput=append:/var/log/yourapp.log
+StandardError=append:/var/log/yourapp.log
+
+[Install]
+WantedBy=multi-user.target
