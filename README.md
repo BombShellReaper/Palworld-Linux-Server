@@ -255,8 +255,6 @@ Fine the following lines uncomment them with the edits
 
     Max Sessions 4
 
-  You can enable Pubic Keys for more security, but I will not be going over this in this "How To"
-
 Reload systemctl & restart sshd.services
 
     sudo systemctl daemon-reload
