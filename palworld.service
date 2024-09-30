@@ -6,16 +6,15 @@ This document provides a template for creating a systemd service file. You can c
 
 Create a new file named `your-service.service` in your systemd directory (typically `/etc/systemd/system/`):
 
-```ini
 [Unit]
 Description=Your Application Description
 After=network.target
 
 [Service]
 Type=simple
-User=youruser
-WorkingDirectory=/path/to/your/app
-ExecStart=/path/to/your/app/your-executable.sh
+User=youruser         # Replace with your username
+WorkingDirectory=/path/to/your/app       # Replace with the actual path
+ExecStart=/path/to/your/executable/startup/script      # Replace with your script path
 RemainAfterExit=yes
 Restart=on-failure
 RestartSec=5
