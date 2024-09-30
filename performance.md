@@ -2,7 +2,7 @@
 
 loacate the Engine.ini here:
 
-    nano /steamapps/common/PalServer/Pal/Saved/Config/LinuxServer/Engine.ini
+    nano /Steam/steamapps/common/PalServer/Pal/Saved/Config/LinuxServer/Engine.ini
 
 Add the following configuartion to the end
 
