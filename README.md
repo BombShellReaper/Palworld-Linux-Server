@@ -161,9 +161,16 @@ Copy and edit the following script:
     LOGFILE="/path/to/your/logfile.txt"  # Update with your log file path
     DIRPATH="/path/to/your/server" # Update with the directory containing PalServer.sh
 
+    # Create the log directory if it doesn't exist
+    LOGDIR=$(dirname "$LOGFILE")
+    mkdir -p "$LOGDIR"
+
+    # Create the log file if it doesn't exist
+    touch "$LOGFILE"
+
     # Function to log messages with date/time
     log() {
-        echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" >> "$LOGFILE"
+    echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" >> "$LOGFILE"
     }
 
     # Update PalWorld using steamcmd
@@ -173,7 +180,6 @@ Copy and edit the following script:
             log "Update completed."
         else
             log "Update failed."
-        
         fi
 
         # Start the PalWorld server
