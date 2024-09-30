@@ -135,6 +135,10 @@ PublicIP=""
 
 # Step 7: Create a Startup Script (Optional)
 
+Return to the users home directory
+
+    cd
+
 Create a directory while logged in as the user you created:
 
     mkdir scripts
