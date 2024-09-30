@@ -26,7 +26,7 @@ Add the following configuartion to the end
     FixedFrameRate=120.000000     ; (Not active due to bUseFixedFrameRate set to false) Placeholder for a fixed frame rate if needed.
     NetClientTicksPerSecond=120   ; Increases the update frequency for clients, enhancing responsiveness and reducing lag.
     
-**Note:**
+**Notes:**
 
 - Make sure you back up your original Engine.ini before making changes.
 
