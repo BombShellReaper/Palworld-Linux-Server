@@ -202,7 +202,7 @@ Make the script executable by the user:
 
 # Step 8: Create a Systemd Service (Optional)
 
-Switch to your sudo user that you used at the beginning. Replace *your_username* with the actual username.
+Switch to your sudo user that you used at the beginning. Replace "*your_username*" with the actual username.
 
     su your_username
 
@@ -235,13 +235,13 @@ Switch to your sudo user that you used at the beginning. Replace *your_username*
     sudo systemctl enable PalWorld.service
     sudo systemctl start PalWorld.service
 
-# Step 9: Hardening The SSH Server (Optional)
+# Step 9: Hardening (Optional)
 
 Login with the sudo sure and edit the sshd_config file
 
     sudo nano /etc/ssh/sshd_config
 
-Fine the following lines uncomment them with the edits
+Fine the following lines and uncomment them with these edits
 
  **#LoginGraceTime 2m**
 
@@ -266,7 +266,7 @@ Reload systemctl & restart sshd.services
 
 These are some of the measures you can take harden your ssh service.
 
-# Step 10: Change Who Can Use The Switch User Command
+# Change Who Can Use The Switch User (su) Command
 
 Make a new group for the su command. Replace "*group_name*" with your desired name for the new group.
 
