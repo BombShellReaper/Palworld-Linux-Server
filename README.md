@@ -180,7 +180,7 @@ Copy and edit the following script:
     # Update PalWorld using steamcmd
     {
             log "Updating PalWorld..."
-        if /usr/games/steamcmd +force_install_dir "$DIRPATH" +login anonymous +app_update 2394010 validate +quit; then  # Update with the app ID
+        if /usr/games/steamcmd +force_install_dir "$DIRPATH" +login anonymous +app_update 2394010 validate +quit; then
             log "Update completed."
         else
             log "Update failed."
