@@ -24,13 +24,13 @@ Directory structures may differ based on your specific setup.
     sudo dpkg --add-architecture i386
     sudo apt update
 
-**Install screen (Session Manager)**
+**Install Screen (Session Manager)**
 
     sudo apt install screen -y
 
 **Install OpenSSH Sever**
 
-This will make is so that you can copy the commands into the terminal
+This allows you to copy commands into the terminal.
 
     sudo apt install openssh-server -y
 
@@ -38,29 +38,29 @@ This will make is so that you can copy the commands into the terminal
 
     sudo apt install steamcmd -y
 
-**Install UFW (Firewall)**
+**Install UFW (Uncomplicated Firewall)**
 
     sudo apt install ufw -y
 
 # Step 3: Configure UFW (Uncomplicated Firewall)
 
-This rule allows all incoming connections to port 8211 on the host machine
+Allow all incoming connections to port 8211:
 
     sudo ufw allow from any proto udp to any port 8211 comment "Palworld Server Port"
 
-**Note:** To make this more secure you can change the "any" in "from any" to an IP address or to a range of address.
+**Note:** For added security, change "any" to a specific IP address or range.
 
-This rule allows all incoming connections to port 27015 on the host machine
+Allow all incoming connections to port 27015:
 
     sudo ufw allow from any proto udp to any port 27015 comment "Palworld Query Port"
 
-**Note:** To make this more secure you can change the "any" in "from any" to an IP address or to a range of address.
+**Note:** For added security, change "any" to a specific IP address or range.
 
-**Allow SSH connections through the UFW** (Optional)
+**Allow SSH Connections Through UFW** (Optional)
 
     sudo ufw allow from any to any port 22 comment "SSH"
 
-**Note:** To make this more secure you can change the "any" in "from any" to an IP address to a range of address.
+**Note:** For added security, change "any" to a specific IP address or range.
 
 Use the default rule to **deny** incoming traffic **(Optional)**
 
@@ -73,8 +73,7 @@ Use the default rule to **deny** incoming traffic **(Optional)**
 --------------------------------------------------------------------------------
 # Step 4: Create a non sudo User
 
-Replace your_username with the username you want to create.
-
+Replace your_username with the desired username.
     sudo adduser your_user
 
 **Note:** This will prompt you through the setup
@@ -86,7 +85,7 @@ Replace your_username with the username you want to create.
 -------------------------------------------------------------------------------
 # Step 5: Install Palworld Server
 
-**Login to your server with the new user account through cmd, powershell, putty, etc. Use what ever terminal emulator you like**
+**Log in to your server with the new user account through cmd, PowerShell, PuTTY, etc. Use your preferred terminal emulator.**
 
 **Install Palworld Server Files**
 
@@ -135,15 +134,15 @@ PublicIP=""
 
 # Step 7: Create a Startup Script (Optional)
 
-Make a directory while logged in as the user you created
+Create a directory while logged in as the user you created:
 
     mkdir scripts
 
-Make a script called palworld.sh
+Create a script called palworld.sh:
 
     nano palworld.sh
 
-Copy this and edit the locations for the logging and directory path
+Copy and edit the following script:
 
     #!/bin/bash
 
@@ -165,7 +164,7 @@ Copy this and edit the locations for the logging and directory path
             log "Update completed."
         else
             log "Update failed."
-            # Continue to start the server regardless of update result
+        
         fi
 
         # Start the PalWorld server
@@ -180,15 +179,15 @@ Copy this and edit the locations for the logging and directory path
 
 # Step 8: Create a Systemd Service (Optional)
 
-Switch to your sudo user that you used in the beggining. Make sure to your_username to the user.
+Switch to your sudo user that you used at the beginning. Replace your_username with the actual username.
 
     su your_username
 
-**Create the service file**
+**Create the service file:**
 
     sudo nano /etc/systemd/system/PalWorld.service
 
-Add the following configuration
+**Add the following configuration:**
 
     [Unit]
     Description=Your Application Description
@@ -196,9 +195,9 @@ Add the following configuration
 
     [Service]
     Type=simple
-    User=youruser         # Example test
-    WorkingDirectory=/path/to/your/app       # Example /home/test
-    ExecStart=/path/to/your/executable/startup/script      # Example /script/palworld.sh
+    User=youruser         # Replace with your username
+    WorkingDirectory=/path/to/your/app       # Replace with the actual path
+    ExecStart=/path/to/your/executable/startup/script      # Replace with your script path
     RemainAfterExit=yes
     Restart=on-failure
     RestartSec=5
