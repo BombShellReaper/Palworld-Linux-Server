@@ -1,6 +1,6 @@
 # Performance Configs (Optional)
 
-loacate the Engine.ini here:
+loacate the *Engine.ini*here:
 
     nano /Steam/steamapps/common/PalServer/Pal/Saved/Config/LinuxServer/Engine.ini
 
@@ -28,7 +28,7 @@ Add the following configuartion to the end
     
 **Notes:**
 
-- Make sure you back up your original Engine.ini before making changes.
+- Make sure you back up your original *Engine.ini* before making changes.
 
 - You can adjust the values according to your server’s performance and the needs of your players.
 
