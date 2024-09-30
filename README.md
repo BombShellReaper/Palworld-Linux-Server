@@ -133,10 +133,23 @@ PublicIP=""
 
     nano /home/steam/.steam/steamapps/common/PalServer/DefaultPalWorldSettings.ini
 
+# Step 7: Create a Startup Script (Optional)
 
-# Step 7: Create a Systemd Service (Optional)
+Make a directory while logged in as the user you created
 
-**Switch to your sudo user tha tyou used in the beggining. Mkae sure to change your_username.
+    mkdir scripts
+
+Make a script called palworld.sh
+
+    nano palworld.sh
+
+Copy this and edit the locations for the logging and directory path
+
+    
+
+# Step 8: Create a Systemd Service (Optional)
+
+Switch to your sudo user that you used in the beggining. Make sure to your_username to the user.
 
     su your_username
 
