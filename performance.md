@@ -1,6 +1,6 @@
 # Performance Configs (Optional)
 
-loacate the *Engine.ini* here:
+Locate the *Engine.ini* here:
 
     nano /Steam/steamapps/common/PalServer/Pal/Saved/Config/LinuxServer/Engine.ini
 
@@ -8,7 +8,7 @@ Add the following configuartion to the end
 
     [/script/onlinesubsystemutils.ipnetdriver]
     LanServerMaxTickRate=250  ; Sets maximum ticks per second for LAN servers, higher rates result in smoother gameplay.
-    NetServerMaxTickRate=80  ; Sets maximum ticks per second for Internet servers, similarly ensuring smoother online gameplay.
+    NetServerMaxTickRate=80  ; Sets maximum ticks per second for Internet servers, ensuring smoother online gameplay.
 
     [/script/engine.player]
     ConfiguredInternetSpeed=104857600  ; Sets the assumed player internet speed in bytes per second. High value reduces chances of bandwidth throttling.
