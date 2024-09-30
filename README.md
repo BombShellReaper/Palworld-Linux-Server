@@ -62,7 +62,7 @@ Allow all incoming connections to port 27015:
 
 **Note:** For added security, change "any" to a specific IP address or range.
 
-Use the default rule to **deny** incoming traffic **(Optional)**
+Set the default rule to deny incoming traffic (Optional)
 
     sudo ufw default deny incoming
 
@@ -268,7 +268,7 @@ These are some of the measures you can take harden your ssh service.
 
 # Step 10: Change Who Can Use The Switch User Command
 
-Make a new group to for the su command. Replace "*group_name*" with your desired name for the new group.
+Make a new group for the su command. Replace "*group_name*" with your desired name for the new group.
 
     sudo groupadd group_name
 
@@ -276,7 +276,7 @@ Make a new group to for the su command. Replace "*group_name*" with your desired
 
 **Edit who can use the *su* command**
 
-Edit the su config
+Edit the *su* config
 
     sudo nano /etc/pam.d/su
 
