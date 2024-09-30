@@ -143,7 +143,7 @@ Return to the users home directory
 
     cd
 
-Create a directory to place you scripts. Change the "*name*" with the desired username:
+Create a directory to place you scripts. Change the "*name*" with your desired directory name:
 
     mkdir name
 
