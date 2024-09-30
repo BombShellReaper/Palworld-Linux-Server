@@ -266,7 +266,21 @@ Reload systemctl & restart sshd.services
 
 ![image](https://github.com/user-attachments/assets/f12f25af-807d-4981-9e53-ebe2ab3d2688)
 
-This is some of the measures you can take harden your ssh service.
+These are some of the measures you can take harden your ssh service.
+
+Making su not usable by all users
+
+edit the su
+
+    sudo nano /etc/pam.d/su
+
+Edit the following line to restrict su to the restrictedsu group:
+
+    auth       required   pam_wheel.so group=restrictedsu
+
+Example: 
+
+![image](https://github.com/user-attachments/assets/3d3c941b-aadd-4bdb-b736-e2fb4c7b5c8b)
 
 
 **Conclusion**
