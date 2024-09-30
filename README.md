@@ -154,7 +154,7 @@ Add the following configuration
     Type=simple
     User=youruser         # Example test
     WorkingDirectory=/path/to/your/app       # Example /home/test
-    ExecStart=/path/to/your/app/your-executable.sh  # Example Steam/steamapps/common/PalServer/./PalServer.sh -useperfthreads -NoAsyncLoadingThread -UseMultithreadForDS
+    ExecStart=/path/to/your/executable/startup/script      # Example /script/palworld
     RemainAfterExit=yes
     Restart=on-failure
     RestartSec=5
