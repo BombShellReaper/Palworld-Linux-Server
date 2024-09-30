@@ -280,7 +280,7 @@ Edit the su config
 
     sudo nano /etc/pam.d/su
 
-Edit the following line to restrict su to the restrictedsu group. Replace "*group_name*" with the one you made ealier.
+Edit the following line to restrict su. Replace "*group_name*" with the one you made ealier.
 
     auth       required   pam_wheel.so group=group_name
 
