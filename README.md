@@ -186,6 +186,10 @@ Copy and edit the following script:
         fi
     } 2>&1 | tee -a "$LOGFILE"
 
+Make the script executable by the user:
+
+    chmod u+x palworld.sh
+
 # Step 8: Create a Systemd Service (Optional)
 
 Switch to your sudo user that you used at the beginning. Replace *your_username* with the actual username.
