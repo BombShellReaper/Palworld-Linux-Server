@@ -1,10 +1,17 @@
 #!/bin/bash
 
-#set -x # Uncomment to enable debug output. This will show you each command as it’s executed, which can help identify where it fails
+#set -x     # Uncomment to enable debug output. This will show you each command as it’s executed, which can help identify where it fails
 
 # Log file
 LOGFILE="/path/to/your/logfile.txt"  # Update with your log file path
 DIRPATH="/path/to/your/server" # Update with the directory containing PalServer.sh
+
+# Create the log directory if it doesn't exist
+LOGDIR=$(dirname "$LOGFILE")
+mkdir -p "$LOGDIR"
+
+# Create the log file if it doesn't exist
+touch "$LOGFILE"
 
 # Function to log messages with date/time
 log() {
@@ -18,7 +25,6 @@ log() {
         log "Update completed."
     else
         log "Update failed."
-
     fi
 
     # Start the PalWorld server
