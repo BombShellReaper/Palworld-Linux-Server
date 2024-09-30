@@ -235,7 +235,7 @@ Switch to your sudo user that you used at the beginning. Replace *your_username*
     sudo systemctl enable PalWorld.service
     sudo systemctl start PalWorld.service
 
-# Step 9: Hardening the server (Optional)
+# Step 9: Hardening The SSH Server (Optional)
 
 Login with the sudo sure and edit the sshd_config file
 
@@ -266,9 +266,17 @@ Reload systemctl & restart sshd.services
 
 These are some of the measures you can take harden your ssh service.
 
+# Step 10: Making the Switch User Command more secure
+
+Make a new group to for the su command. Replace "*group_name*" with your desired name for the new group.
+
+    sudo groupadd group_name
+
+                Example: sudo groupadd restrictedsu
+
 Edit who can use the *su* caommand
 
-edit the su
+edit the su config
 
     sudo nano /etc/pam.d/su
 
@@ -276,7 +284,7 @@ Edit the following line to restrict su to the restrictedsu group:
 
     auth       required   pam_wheel.so group=restrictedsu
 
-Example: 
+**Example:** 
 
 ![image](https://github.com/user-attachments/assets/3d3c941b-aadd-4bdb-b736-e2fb4c7b5c8b)
 
