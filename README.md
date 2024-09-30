@@ -272,9 +272,9 @@ Make a new group to for the su command. Replace "*group_name*" with your desired
 
     sudo groupadd group_name
 
-                Example: sudo groupadd restrictedsu
+Example: sudo groupadd restrictedsu
 
-Edit who can use the *su* caommand
+**Edit who can use the *su* command**
 
 edit the su config
 
