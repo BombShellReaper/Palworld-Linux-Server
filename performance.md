@@ -1,4 +1,4 @@
-# Some optional configs to assist with performace
+# Performance Configs (Optional)
 
 loacate the Engine.ini here:
 
