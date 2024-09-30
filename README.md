@@ -30,7 +30,7 @@ Directory structures may differ based on your specific setup.
 
 **Install OpenSSH Sever**
 
-This allows you to copy commands into the terminal.
+This enables secure remote access to your server.
 
     sudo apt install openssh-server -y
 
@@ -69,6 +69,10 @@ Use the default rule to **deny** incoming traffic **(Optional)**
 **Enable UFW** (UFW will enable on reboot)
 
     sudo ufw enable
+
+Check the UFW status after enabling it:
+
+    sudo ufw status
     
 --------------------------------------------------------------------------------
 # Step 4: Create a Non Sudo User
@@ -233,11 +237,7 @@ Switch to your sudo user that you used at the beginning. Replace *your_username*
 
 # Step 9: Hardening the server (Optional)
 
-These are some options to harden the ssh service and to remove the *su* command from any non-root users from using.
-
-Login with the sudo user
-
-Edit the sshd_config file
+Login with the sudo sure and edit the sshd_config file
 
     sudo nano /etc/ssh/sshd_config
 
@@ -268,7 +268,7 @@ Reload systemctl & restart sshd.services
 
 These are some of the measures you can take harden your ssh service.
 
-Making su not usable by all users
+Edit who can use the *su* caommand
 
 edit the su
 
