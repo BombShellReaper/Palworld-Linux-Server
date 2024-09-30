@@ -73,8 +73,8 @@ Use the default rule to **deny** incoming traffic **(Optional)**
 --------------------------------------------------------------------------------
 # Step 4: Create a non sudo User
 
-Replace your_username with the desired username.
-    sudo adduser your_user
+Replace *your_username* with the desired username.
+    sudo adduser your_username
 
 **Note:** This will prompt you through the setup
 
@@ -179,7 +179,7 @@ Copy and edit the following script:
 
 # Step 8: Create a Systemd Service (Optional)
 
-Switch to your sudo user that you used at the beginning. Replace your_username with the actual username.
+Switch to your sudo user that you used at the beginning. Replace *your_username* with the actual username.
 
     su your_username
 
