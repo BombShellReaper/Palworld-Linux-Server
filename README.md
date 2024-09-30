@@ -276,7 +276,7 @@ Make a new group to for the su command. Replace "*group_name*" with your desired
 
 **Edit who can use the *su* command**
 
-edit the su config
+Edit the su config
 
     sudo nano /etc/pam.d/su
 
