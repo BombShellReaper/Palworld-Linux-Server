@@ -237,7 +237,7 @@ Switch to your sudo user that you used at the beginning. Replace "*your_username
 
 # Step 9: Hardening (Optional)
 
-Login with the sudo sure and edit the sshd_config file
+Login with the sudo user and edit the sshd_config file
 
     sudo nano /etc/ssh/sshd_config
 
