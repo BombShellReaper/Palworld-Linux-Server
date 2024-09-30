@@ -71,7 +71,7 @@ Use the default rule to **deny** incoming traffic **(Optional)**
     sudo ufw enable
     
 --------------------------------------------------------------------------------
-# Step 4: Create a non sudo User
+# Step 4: Create a Non Sudo User
 
 Replace "*your_username*" with the desired username.
 
