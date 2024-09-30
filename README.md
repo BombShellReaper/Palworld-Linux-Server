@@ -20,16 +20,19 @@ Directory structures may differ based on your specific setup.
 
 # Step 2: Install Required Dependencies
 
-    sudo add-apt-repository multiverse
-    sudo dpkg --add-architecture i386; sudo apt update
+    sudo add-apt-repository multiverse -y
+    sudo dpkg --add-architecture i386
+    sudo apt update
 
 **Install screen (Session Manager)**
 
     sudo apt install screen -y
 
-**Update**
+**Install OpenSSH Sever**
 
-    sudo apt update
+This will make is so that you can copy the commands into the terminal
+
+    sudo apt install openssh-server -y
 
 **Install Steamcmd**
 
@@ -76,20 +79,14 @@ Replace your_username with the username you want to create.
 
 **Note:** This will prompt you through the setup
 
+**Reboot the system**
+
+    sudo reboot
+
 -------------------------------------------------------------------------------
 # Step 5: Install Palworld Server
 
-**Switch to the steam user**
-
-Replace your_username with the username you created.
-
-    su your_username
-
-**Move to the steam home dir**
-
-Replace your_username with the username you created.
-
-    cd /home/your_username
+**Login to your server with the new user account through cmd, powershell, putty, etc. Use what ever terminal emulator you like**
 
 **Install Palworld Server Files**
 
@@ -97,7 +94,7 @@ Replace your_username with the username you created.
 
 **Navigate to the Server Directory**
 
-    cd .steam/steam/steamapps/common/PalServer
+    cd Steam/steamapps/common/PalServer
 
 **Start the server**
 
@@ -139,6 +136,10 @@ PublicIP=""
 
 # Step 7: Create a Systemd Service (Optional)
 
+**Switch to your sudo user tha tyou used in the beggining. Mkae sure to change your_username.
+
+    su your_username
+
 **Create the service file**
 
     sudo nano /etc/systemd/system/PalWorld.service
@@ -151,9 +152,9 @@ Add the following configuration
 
     [Service]
     Type=simple
-    User=youruser
-    WorkingDirectory=/path/to/your/app
-    ExecStart=/path/to/your/app/your-executable.sh
+    User=youruser         # Example test
+    WorkingDirectory=/path/to/your/app       # Example /home/test
+    ExecStart=/path/to/your/app/your-executable.sh  # Example Steam/steamapps/common/PalServer/./PalServer.sh -useperfthreads -NoAsyncLoadingThread -UseMultithreadForDS
     RemainAfterExit=yes
     Restart=on-failure
     RestartSec=5
