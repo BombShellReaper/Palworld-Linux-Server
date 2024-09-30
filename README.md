@@ -231,6 +231,44 @@ Switch to your sudo user that you used at the beginning. Replace *your_username*
     sudo systemctl enable PalWorld.service
     sudo systemctl start PalWorld.service
 
+# Step 9: Hardening the server (Optional)
+
+These are some options to harden the ssh service and to remove the *su* command from any non-root users from using.
+
+Login with the sudo user
+
+Edit the sshd_config file
+
+    sudo nano /etc/ssh/sshd_config
+
+Fine the following lines uncomment them with the edits
+
+ **#LoginGraceTime 2m**
+
+    LoginGraceTime 1m
+
+ **#PermitRootLogin prohibit-password**
+
+    PermitRootLogin no
+
+ **#MaxSessions 10**
+
+    Max Sessions 4
+
+  You can enable Pubic Keys for more security, but I will not be going over this in this "How To"
+
+Reload systemctl & restart sshd.services
+
+    sudo systemctl daemon-reload
+    sudo systemctl restart sshd.service
+
+**Example:**
+
+![image](https://github.com/user-attachments/assets/f12f25af-807d-4981-9e53-ebe2ab3d2688)
+
+This is some of the measures you can take harden your ssh service.
+
+
 **Conclusion**
 
 You have successfully set up your Palworld server! For further customization, refer to the game’s official documentation.
