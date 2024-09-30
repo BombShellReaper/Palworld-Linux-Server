@@ -139,9 +139,13 @@ Return to the users home directory
 
     cd
 
-Create a directory while logged in as the user you created:
+Create a directory to place you scripts. Change the "*name*" with the desired username:
 
-    mkdir scripts
+    mkdir name
+
+Change to the new directory. Change the "*name*" with the one you just created:
+
+    cd name
 
 Create a script called palworld.sh:
 
