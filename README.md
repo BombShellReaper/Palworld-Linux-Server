@@ -68,9 +68,11 @@ Use the default rule to **deny** incoming traffic **(Optional)**
     sudo ufw enable
     
 --------------------------------------------------------------------------------
-# Step 4: Create a Steam User
+# Step 4: Create a non sudo User
 
-    sudo adduser steam 
+Replace your_username with the username you want to create.
+
+    sudo adduser your_user
 
 **Note:** This will prompt you through the setup
 
@@ -79,11 +81,15 @@ Use the default rule to **deny** incoming traffic **(Optional)**
 
 **Switch to the steam user**
 
-    su steam
+Replace your_username with the username you created.
+
+    su your_username
 
 **Move to the steam home dir**
 
-    cd /home/steam
+Replace your_username with the username you created.
+
+    cd /home/your_username
 
 **Install Palworld Server Files**
 
