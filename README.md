@@ -147,7 +147,7 @@ Copy this and edit the locations for the logging and directory path
 
     #!/bin/bash
 
-    #set -x # Uncomment to enable debug output. This will show you each command as it’s executed, which can help identify where it fails
+    #set -x     # Uncomment to enable debug output. This will show you each command as it’s executed, which can help identify where it fails
 
     # Log file
     LOGFILE="/path/to/your/logfile.txt"  # Update with your log file path
