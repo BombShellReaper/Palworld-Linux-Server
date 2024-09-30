@@ -73,7 +73,8 @@ Use the default rule to **deny** incoming traffic **(Optional)**
 --------------------------------------------------------------------------------
 # Step 4: Create a non sudo User
 
-Replace *your_username* with the desired username.
+Replace "*your_username*" with the desired username.
+
     sudo adduser your_username
 
 **Note:** This will prompt you through the setup
