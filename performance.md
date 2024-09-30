@@ -1,6 +1,6 @@
 # Performance Configs (Optional)
 
-loacate the *Engine.ini*here:
+loacate the *Engine.ini* here:
 
     nano /Steam/steamapps/common/PalServer/Pal/Saved/Config/LinuxServer/Engine.ini
 
