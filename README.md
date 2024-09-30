@@ -266,7 +266,7 @@ Reload systemctl & restart sshd.services
 
 These are some of the measures you can take harden your ssh service.
 
-# Step 10: Making the Switch User Command more secure
+# Step 10: Change Who Can Use The Switch User Command
 
 Make a new group to for the su command. Replace "*group_name*" with your desired name for the new group.
 
