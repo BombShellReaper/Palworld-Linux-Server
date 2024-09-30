@@ -129,9 +129,9 @@ PublicIP=""
 
 ![image](https://github.com/user-attachments/assets/3efb9777-25d3-49ec-8846-e56372c564f0)
 
-**Note:** You can also find the PalWorldSettings.ini settings at the following location.
+**Note:** You can also find the PalWorldSettings.ini settings at the following location. Replace *your_username* with the actual username.
 
-    nano /home/steam/.steam/steamapps/common/PalServer/DefaultPalWorldSettings.ini
+    nano /home/your_username/Steam/steamapps/common/PalServer/DefaultPalWorldSettings.ini
 
 # Step 7: Create a Startup Script (Optional)
 
