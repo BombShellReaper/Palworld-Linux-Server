@@ -215,8 +215,7 @@ Switch to your sudo user that you used at the beginning. Replace *your_username*
     [Service]
     Type=simple
     User=youruser         # Replace with your username
-    WorkingDirectory=/path/to/your/app       # Replace with the actual path
-    ExecStart=/path/to/your/executable/startup/script      # Replace with your script path
+    ExecStart=/path/to/your/executable/startup/script      # Replace with your full script path
     RemainAfterExit=yes
     Restart=on-failure
     RestartSec=5
