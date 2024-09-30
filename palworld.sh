@@ -18,7 +18,7 @@ log() {
         log "Update completed."
     else
         log "Update failed."
-        # Continue to start the server regardless of update result
+
     fi
 
     # Start the PalWorld server
