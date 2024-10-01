@@ -218,7 +218,7 @@ Switch to your sudo user that you used at the beginning. Replace "*your_username
 
     [Service]
     Type=simple
-    User=youruser         # Replace with your username
+    User=youruser         # Replacewith the username you created in the beginning
     ExecStart=/path/to/your/executable/startup/script.sh      # Replace with your full script path
     RemainAfterExit=yes
     Restart=on-failure
