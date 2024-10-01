@@ -250,7 +250,7 @@ Login with the sudo user and edit the sshd_config file
 
     sudo nano /etc/ssh/sshd_config
 
-Fined the following lines and uncomment them with these edits
+Locate the following lines and uncomment them, making the specified edits:
 
  **#LoginGraceTime 2m**
 
