@@ -231,8 +231,9 @@ Switch to your sudo user that you used at the beginning. Replace "*your_username
 
 **Example:**
 
-    User=test
-    ExecStart=/home/test/scripts/palworld.sh
+*User=test*
+
+*ExecStart=/home/test/scripts/palworld.sh*
 
 **Enable and Start the Service**
 
