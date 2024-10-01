@@ -235,6 +235,8 @@ Switch to your sudo user that you used at the beginning. Replace "*your_username
 
 *ExecStart=/home/test/scripts/palworld.sh*
 
+**Note:** This systemd service, along with the accompanying script, ensures that your server automatically starts after a reboot and updates itself before launching.
+
 **Enable and Start the Service**
 
     sudo systemctl daemon-reload
