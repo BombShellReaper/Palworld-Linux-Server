@@ -273,9 +273,9 @@ Reload systemctl & restart sshd.services
 
 ![image](https://github.com/user-attachments/assets/f12f25af-807d-4981-9e53-ebe2ab3d2688)
 
-These are some of the measures you can take harden your ssh service.
+These are some steps you can take to enhance the security of your SSH service.
 
-# Change Who Can Use The Switch User (su) Command
+# Change Who Can Use the Switch User (su) Command
 
 Make a new group for the su command. Replace "*group_name*" with your desired name for the new group.
 
