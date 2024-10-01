@@ -281,7 +281,7 @@ Make a new group for the su command. Replace "*group_name*" with your desired na
 
     sudo groupadd group_name
 
-**Example:** sudo groupadd restrictedsu
+**Example:** *sudo groupadd restrictedsu*
 
 **Edit who can use the *su* command**
 
@@ -293,7 +293,7 @@ Edit the following line to restrict su. Replace "*group_name*" with the one you 
 
     auth       required   pam_wheel.so group=group_name
 
-**Example:** auth       required   pam_wheel.so group=restrictedsu
+**Example:** *auth       required   pam_wheel.so group=restrictedsu*
 
 **Example:** 
 
