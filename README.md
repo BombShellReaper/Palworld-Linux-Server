@@ -229,6 +229,11 @@ Switch to your sudo user that you used at the beginning. Replace "*your_username
     [Install]
     WantedBy=multi-user.target
 
+**Example:**
+
+    User=test
+    ExecStart=/home/test/Steam/steamapps/common/
+
 **Enable and Start the Service**
 
     sudo systemctl daemon-reload
