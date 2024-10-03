@@ -151,9 +151,9 @@ Change to the new directory. Change the "*name*" with the one you just created:
 
     cd name
 
-Create a script called palworld.sh:
+Create a script. Change the "*name.sh*" with your desired script name.
 
-    nano palworld.sh
+    nano name.sh
 
 Copy and edit the following script:
 
@@ -163,7 +163,7 @@ Copy and edit the following script:
 
     # Log file
     LOGFILE="/path/to/your/logfile.txt"  # Update with your log file path
-    DIRPATH="/path/to/your/server" # Update with the directory containing PalServer.sh
+    DIRPATH="/path/to/your/server" # Update with the directory containing "*name.sh*"
 
     # Create the log directory if it doesn't exist
     LOGDIR=$(dirname "$LOGFILE")
