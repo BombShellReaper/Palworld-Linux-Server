@@ -108,7 +108,7 @@ if [ -f "$startup_script" ]; then
     if [ -s "$startup_script" ]; then
         echo "Startup script has configurations.: $startup_script." | tee -a "$log_file"
     else
-        echo "Startup script is empty: $startup_script. Go back to (Step 7) in GitHub for proper execution of the instructions." | tee -a "$log_file"
+        echo "Startup script is empty: $startup_script Go back to (Step 7) in GitHub for proper execution of the instructions." | tee -a "$log_file"
         success=false
         exit 1
     fi
@@ -124,4 +124,5 @@ if [ "$success" = true ]; then
     rm "$log_file"
 else
     echo "Some checks failed. Please review the log file for details." | tee -a "$log_file"
+    exit 1
 fi
