@@ -1,3 +1,4 @@
+#dedicatedserver
 # Palworld Linux Server Setup Guide
 
 **Overview**
