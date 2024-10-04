@@ -11,9 +11,8 @@ This is a step-by-step guide on how to set up and run a Ubuntu Palworld server.
 - Basic knowledge of terminal commands
 - A user with sudo privileges
 
-**Disclaimer**
-
-Directory structures may differ based on your specific setup.
+> [!Caution]
+> Directory structures may differ based on your specific setup.
 
 # Step 1: Update and Upgrade Your System
 
@@ -49,19 +48,22 @@ Allow all incoming connections to port 8211:
 
     sudo ufw allow from any proto udp to any port 8211 comment "Palworld Server Port"
 
-**Note:** For added security, change "any" to a specific IP address or range.
+> [!TIP]
+ For added security, change "any" to a specific IP address or range.
 
 Allow all incoming connections to port 27015:
 
     sudo ufw allow from any proto udp to any port 27015 comment "Palworld Query Port"
 
-**Note:** For added security, change "any" to a specific IP address or range.
+> [!TIP]
+> For added security, change "any" to a specific IP address or range.
 
 **Allow SSH Connections Through UFW** (Optional)
 
     sudo ufw allow from any to any port 22 comment "SSH"
 
-**Note:** For added security, change "any" to a specific IP address or range.
+> [!TIP]
+> For added security, change "any" to a specific IP address or range.
 
 Set the default rule to deny incoming traffic (Optional)
 
@@ -82,7 +84,8 @@ Replace "*your_username*" with the desired username.
 
     sudo adduser your_username
 
-**Note:** This will prompt you through the setup
+> [!NOTE]
+> This will prompt you through the setup
 
 **Reboot the system**
 
@@ -118,7 +121,8 @@ Stop the server with Ctrl + C.
     [/Script/Pal.PalGameWorldSettings]
     OptionSettings=(Difficulty=None,DayTimeSpeedRate=1.000000,NightTimeSpeedRate=1.000000,ExpRate=1.000000,PalCaptureRate=1.000000,PalSpawnNumRate=1.000000,PalDamageRateAttack=1.000000,PalDamageRateDefense=1.000000,PlayerDamageRateAttack=1.000000,PlayerDamageRateDefense=1.000000,PlayerStomachDecreaceRate=1.000000,PlayerStaminaDecreaceRate=1.000000,PlayerAutoHPRegeneRate=1.000000,PlayerAutoHpRegeneRateInSleep=1.000000,PalStomachDecreaceRate=1.000000,PalStaminaDecreaceRate=1.000000,PalAutoHPRegeneRate=1.000000,PalAutoHpRegeneRateInSleep=1.000000,BuildObjectDamageRate=1.000000,BuildObjectDeteriorationDamageRate=1.000000,CollectionDropRate=1.000000,CollectionObjectHpRate=1.000000,CollectionObjectRespawnSpeedRate=1.000000,EnemyDropItemRate=1.000000,DeathPenalty=All,bEnablePlayerToPlayerDamage=False,bEnableFriendlyFire=False,bEnableInvaderEnemy=True,bActiveUNKO=False,bEnableAimAssistPad=True,bEnableAimAssistKeyboard=False,DropItemMaxNum=3000,DropItemMaxNum_UNKO=100,BaseCampMaxNum=128,BaseCampWorkerMaxNum=15,DropItemAliveMaxHours=1.000000,bAutoResetGuildNoOnlinePlayers=False,AutoResetGuildTimeNoOnlinePlayers=72.000000,GuildPlayerMaxNum=20,BaseCampMaxNumInGuild=4,PalEggDefaultHatchingTime=72.000000,WorkSpeedRate=1.000000,AutoSaveSpan=30.000000,bIsMultiplay=False,bIsPvP=False,bCanPickupOtherGuildDeathPenaltyDrop=False,bEnableNonLoginPenalty=True,bEnableFastTravel=True,bIsStartLocationSelectByMap=True,bExistPlayerAfterLogout=False,bEnableDefenseOtherGuildPlayer=False,bInvisibleOtherGuildBaseCampAreaFX=False,CoopPlayerMaxNum=4,ServerPlayerMaxNum=32,ServerName="Default Palworld Server",ServerDescription="",AdminPassword="",ServerPassword="",PublicPort=8211,PublicIP="",RCONEnabled=False,RCONPort=25575,Region="",bUseAuth=True,BanListURL="https://api.palworldgame.com/api/banlist.txt",RESTAPIEnabled=False,RESTAPIPort=8212,bShowPlayerList=False,AllowConnectPlatform=Steam,bIsUseBackupSaveData=True,LogFormatType=Text,SupplyDropSpan=180)
 
-**Notice:** Edit the following settings as needed:
+> [!TIP]
+> Edit the following settings as needed:
 
 ServerName=""
 
@@ -130,11 +134,13 @@ ServerPassword="" (optional)
 
 PublicIP=""
 
-**Notice:** The file should have two lines and if you use nano it should look something like this.
+> [!Important]
+> The file should have two lines and if you use nano it should look something like this.
 
 ![image](https://github.com/user-attachments/assets/3efb9777-25d3-49ec-8846-e56372c564f0)
 
-**Note:** You can also find the PalWorldSettings.ini settings at the following location. Replace *your_username* with the actual username.
+> [!TIP]
+> You can also find the PalWorldSettings.ini settings at the following location. Replace *your_username* with the actual username.
 
     nano /home/your_username/Steam/steamapps/common/PalServer/DefaultPalWorldSettings.ini
 
@@ -230,12 +236,11 @@ Switch to your sudo user that you used at the beginning. Replace "*your_username
     [Install]
     WantedBy=multi-user.target
 
-**Example:**
-
-*User=test*
-
-*ExecStart=/home/test/scripts/palworld.sh*
-
+> **Example**
+> 
+> User=test
+> 
+> ExecStart=/home/test/scripts/palworld.sh
 
 **Enable and Start the Service**
 
@@ -243,7 +248,8 @@ Switch to your sudo user that you used at the beginning. Replace "*your_username
     sudo systemctl enable PalWorld.service
     sudo systemctl start PalWorld.service
 
-**Note:** *This systemd service, along with the accompanying script, ensures that your server automatically starts after a reboot and updates itself before launching.*
+> [!Important]
+>  *This systemd service, along with the accompanying script, ensures that your server automatically starts after a reboot and updates itself before launching.*
 
 # Step 9: Hardening (Optional)
 
@@ -282,7 +288,7 @@ Make a new group for the su command. Replace "*group_name*" with your desired na
 
     sudo groupadd group_name
 
-**Example:** *sudo groupadd restrictedsu*
+> **Example:** *sudo groupadd restrictedsu*
 
 **Edit who can use the *su* command**
 
@@ -294,7 +300,7 @@ Edit the following line to restrict su. Replace "*group_name*" with the one you 
 
     auth       required   pam_wheel.so group=group_name
 
-**Example:** *auth       required   pam_wheel.so group=restrictedsu*
+> **Example:** *auth       required   pam_wheel.so group=restrictedsu*
 
 **Example:** 
 
