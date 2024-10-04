@@ -1,4 +1,4 @@
-![Linux](https://img.shields.io/badge/Dedicated_Server-Linux-8A2BE2)
+![Linux](https://img.shields.io/badge/Dedicated_Server-Linux-green)
 ![Palworld](https://img.shields.io/badge/Palworld-8A2BE2)
 ![Steam](https://img.shields.io/badge/Steam-8A2BE2)
 # Palworld Linux Server Setup Guide
