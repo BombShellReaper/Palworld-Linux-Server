@@ -276,7 +276,7 @@ Locate the following lines and uncomment them, making the specified edits:
 Reload systemctl & restart sshd.services
 
     sudo systemctl daemon-reload
-    sudo systemctl restart sshd.service
+    sudo systemctl restart ssh.service
 
 **Example:**
 
