@@ -232,6 +232,8 @@ Switch to your sudo user that you used at the beginning. Replace "*your_username
     RemainAfterExit=yes
     Restart=on-failure
     RestartSec=5
+    StartLimitIntervalSec=60
+    StartLimitBurst=3
     StandardOutput=append:/var/log/yourapp.log
     StandardError=append:/var/log/yourapp.log
 
