@@ -17,6 +17,8 @@ ExecStart=/path/to/your/executable/startup/script.sh      # Replace with your fu
 RemainAfterExit=yes
 Restart=on-failure
 RestartSec=5
+StartLimitIntervalSec=60
+StartLimitBurst=3
 StandardOutput=append:/var/log/yourapp.log
 StandardError=append:/var/log/yourapp.log
 
