@@ -111,7 +111,7 @@ Replace "*your_username*" with the desired username.
     ./PalServer.sh -useperfthreads -NoAsyncLoadingThread -UseMultithreadForDS
 
 Stop the server with Ctrl + C.
-
+--------------------------------------------------------------------------------
 # Step 6: Configure the Server
 
 **Edit PalWorldSettings.ini**
@@ -146,6 +146,7 @@ PublicIP=""
 
     nano /home/your_username/Steam/steamapps/common/PalServer/DefaultPalWorldSettings.ini
 
+--------------------------------------------------------------------------------
 # Step 7: Create a Startup Script (Optional)
 
 Return to the users home directory
@@ -209,6 +210,7 @@ Make the script executable by the user:
 
     chmod u+x palworld.sh
 
+--------------------------------------------------------------------------------
 # Step 8: Create a Systemd Service (Optional)
 
 Switch to your sudo user that you used at the beginning. Replace "*your_username*" with the actual username.
@@ -255,6 +257,7 @@ Switch to your sudo user that you used at the beginning. Replace "*your_username
 > [!Important]
 >  *This systemd service, along with the accompanying script, ensures that your server automatically starts after a reboot and updates itself before launching.*
 
+--------------------------------------------------------------------------------
 # Step 9: Hardening (Optional)
 
 Login with the sudo user and edit the sshd_config file
