@@ -19,7 +19,7 @@ This is a step-by-step guide on how to set up and run a Ubuntu Palworld server.
 # Step 1: Update and Upgrade Your System
 
     sudo apt update && sudo apt full-upgrade -y && sudo apt autoremove -y
-
+--------------------------------------------------------------------------------
 # Step 2: Install Required Dependencies
 
     sudo add-apt-repository multiverse -y
@@ -43,7 +43,7 @@ This enables secure remote access to your server.
 **Install UFW (Uncomplicated Firewall)**
 
     sudo apt install ufw -y
-
+--------------------------------------------------------------------------------
 # Step 3: Configure UFW (Uncomplicated Firewall)
 
 Allow all incoming connections to port 8211:
