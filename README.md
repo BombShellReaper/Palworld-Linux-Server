@@ -100,7 +100,7 @@ Replace "*your_username*" with the desired username.
 
 **Install Palworld Server Files**
 
-    steamcmd +login anonymous +app_update 2394010 validate +quit
+    steamcmd +force_install_dir /home/your_username/pw_server +login anonymous +app_update 2394010 validate +quit
 
 **Navigate to the Server Directory**
 
