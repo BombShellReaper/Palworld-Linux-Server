@@ -116,7 +116,7 @@ Stop the server with Ctrl + C.
 
 **Edit PalWorldSettings.ini**
 
-    nano Pal/Saved/Config/LinuxServer/PalWorldSettings.ini
+    nano /home/your_username/pw_server/Pal/Saved/Config/LinuxServer/PalWorldSettings.ini
 
 **Add the following to PalworldSettings.ini**
 
