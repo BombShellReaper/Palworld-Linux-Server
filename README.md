@@ -104,7 +104,7 @@ Replace "*your_username*" with the desired username.
 
 **Navigate to the Server Directory**
 
-    cd pw_server/steamapps/common/PalServer
+    cd pw_server
 
 **Start the server**
 
