@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # ==============================================================================
-#              PALWORLD GRACEFUL GRACEFUL SHUTDOWN & SAVE ENGINE
+#              PALWORLD GRACEFUL SHUTDOWN & SAVE ENGINE
 # ==============================================================================
 # AUTHOR: BombShellReaper
-# REPO: https://github.com
+# REPO: https://github.com/BombShellReaper/Palworld-Linux-Server
 # ==============================================================================
 
 # --- CONFIGURATION ---
