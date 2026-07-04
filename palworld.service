@@ -1,26 +1,17 @@
-# Generic Systemd Service Template
-
-This document provides a template for creating a systemd service file. You can customize it for your specific application.
-
-## Service File Template
-
-Create a new file named `your-service.service` in your systemd directory (typically `/etc/systemd/system/`):
-
 [Unit]
-Description=Your Application Description
-After=network.target
+Description=Palworld Server Instance
+After=network.target network-online.target
+Wants=network-online.target
 
 [Service]
-Type=simple
-User=youruser         # Replace with your username
-ExecStart=/path/to/your/executable/startup/script.sh      # Replace with your full script path
-RemainAfterExit=yes
-Restart=on-failure
-RestartSec=5
-StartLimitIntervalSec=60
-StartLimitBurst=3
-StandardOutput=append:/var/log/yourapp.log
-StandardError=append:/var/log/yourapp.log
+Type=forking
+User=your_username
+WorkingDirectory=/home/your_username
+ExecStart=/home/your_username/name/palworld.sh
+RemainAfterExit=no
+Restart=no
+StandardOutput=null
+StandardError=null
 
 [Install]
 WantedBy=multi-user.target
