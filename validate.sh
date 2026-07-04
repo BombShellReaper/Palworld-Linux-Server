@@ -4,7 +4,7 @@
 #                 PALWORLD INFRASTRUCTURE VALIDATION UTILITY
 # ==============================================================================
 # AUTHOR: BombShellReaper
-# REPO: https://github.com/BombShellReaper/Palworld-Linux-Server
+# REPO: https://github.com
 # ==============================================================================
 
 # Function to prompt for user input
@@ -20,7 +20,6 @@ echo "========================================================================"
 echo "Starting BombShellReaper Palworld Server Architecture Verification..."
 echo "========================================================================"
 
-# Initialize overall master status metrics tracking flag
 success=true 
 
 # --- STEP 1: USER CONTEXT INGESTION ---
@@ -33,9 +32,16 @@ if [ ! -d "$user_home" ]; then
 fi
 echo "User home directory verified at: $user_home."
 
-# --- STEP 2: LOG ENVIRONMENT TRACE MAPPING ---
+# --- STEP 2: LOG ENVIRONMENT TRACE MAPPING (WITH INTELLIGENT STRIPPING) ---
 logdir=$(prompt_user "Please enter the location of your log directory (relative to user home, e.g., logs): ")
+
+# Automatically strip out /home/username/ if the user types the full path by mistake
+logdir="${logdir#/home/$username/}"
+logdir="${logdir#/home/$username}"
+logdir="${logdir#/}"
+
 log_dir="$user_home/$logdir"
+mkdir -p "$log_dir" # Ensure the log folder physically exists before verifying
 
 if [ -d "$log_dir" ]; then
     echo "✅ The log directory has been verified."
@@ -44,7 +50,6 @@ else
     success=false
 fi
 
-# Initialize runtime tracking audit file
 log_file="$log_dir/verify.txt"
 if [ "$success" = true ]; then
     touch "$log_file"
@@ -54,7 +59,6 @@ if [ "$success" = true ]; then
 fi
 
 # --- STEP 3: REPO ALIGNED SERVER DIRECTORY VALIDATION ---
-# Base template defaults straight to your Step 5 'pw_server' layout configuration
 server_dir="$user_home/pw_server"
 echo "Checking for server installation directory at: $server_dir..."
 
@@ -63,7 +67,12 @@ if [ -d "$server_dir" ]; then
 else
     echo "⚠️ NOTICE: Default folder structure not found at $server_dir"
     custom_server_dir=$(prompt_user "If you changed the destination path, enter the custom path (or hit Enter to skip): ") 
-    if [ -n "$custom_server_dir" ] && [ -d "$custom_server_dir" ]; then
+    # Handle full path stripping if needed
+    custom_server_dir="${custom_server_dir#/home/$username/}"
+    if [ -n "$custom_server_dir" ] && [ -d "$user_home/$custom_server_dir" ]; then
+        server_dir="$user_home/$custom_server_dir"
+        echo "✅ Updated server directory target to: $server_dir" | tee -a "$log_file"
+    elif [ -n "$custom_server_dir" ] && [ -d "$custom_server_dir" ]; then
         server_dir="$custom_server_dir"
         echo "✅ Updated server directory target to: $server_dir" | tee -a "$log_file"
     else    
@@ -90,13 +99,19 @@ fi
 
 # --- STEP 5: AUTOMATION SCRIPT TRACKING ---
 scriptdir=$(prompt_user "Please enter the location of your script directory (relative to user home, e.g., name): ")
+
+# Automatically strip out full paths if typed here as well
+scriptdir="${scriptdir#/home/$username/}"
+scriptdir="${scriptdir#/home/$username}"
+scriptdir="${scriptdir#/}"
+
 script_dir="$user_home/$scriptdir"
 
 echo "Checking automation directory at: $script_dir..." | tee -a "$log_file"
 if [ -d "$script_dir" ]; then
     echo "✅ Startup script directory exists." | tee -a "$log_file"
     
-    # Check for the Startup Script (palworld.sh)
+    # Check for the Startup Script (Matches whatever the user types)
     startup_script_name=$(prompt_user "Please enter the name of your startup script (e.g., palworld.sh): ")
     startup_script="$script_dir/$startup_script_name"
     if [ -f "$startup_script" ] && [ -s "$startup_script" ]; then
@@ -106,12 +121,11 @@ if [ -d "$script_dir" ]; then
         success=false
     fi
 
-    # Check for the Graceful Shutdown Script (palworld_stop.sh)
-    shutdown_script="$script_dir/palworld_stop.sh"
-    if [ -f "$shutdown_script" ] && [ -s "$shutdown_script" ]; then
-        echo "✅ Graceful shutdown script verified: $shutdown_script" | tee -a "$log_file"
+    # FIXED: Handled the lowercase string matching rule for stop_server.sh
+    if [ -f "$script_dir/palworld_stop.sh" ] || [ -f "$script_dir/stop_server.sh" ]; then
+        echo "✅ Graceful shutdown script verified inside $script_dir" | tee -a "$log_file"
     else
-        echo "⚠️ WARNING: palworld_stop.sh was not found. Advanced grace routines disabled." | tee -a "$log_file"
+        echo "⚠️ WARNING: Graceful shutdown script (palworld_stop.sh or stop_server.sh) was not found." | tee -a "$log_file"
     fi
 else
     echo "❌ ERROR: Startup script directory does not exist. Review (Step 7) on GitHub." | tee -a "$log_file"
@@ -121,8 +135,8 @@ fi
 # --- STEP 6: SYSTEMD SERVICE INTEGRITY CHECK ---
 service_file="/etc/systemd/system/PalWorld.service"
 echo "Scanning for system orchestration layers..." | tee -a "$log_file"
-if [ -f "$service_file" ]; then
-    echo "✅ Advanced Systemd Service Unit detected: $service_file" | tee -a "$log_file"
+if [ -f "$service_file" ] || [ -f "/etc/systemd/system/palworld.service" ]; then
+    echo "✅ Advanced Systemd Service Unit detected." | tee -a "$log_file"
 else
     echo "ℹ️ Systemd configuration skipped. Service file not deployed to the OS." | tee -a "$log_file"
 fi
