@@ -34,7 +34,7 @@ NetClientTicksPerSecond=120
 ```
 
 ### 🔍 Why These Settings are Optimized for 1.0:
-* **`NetServerMaxTickRate=120`**: Cranking this up from `80` to `120` matches the tick rate changes required by the updated 1.0 base engine mechanics [0.0]. It makes Pal interactions, sphere catching, and combat tracking feel drastically more responsive.
+* **`NetServerMaxTickRate=120`**: Cranking this up from `80` to `120` matches the tick rate changes required by the updated 1.0 base engine mechanics. It makes Pal interactions, sphere catching, and combat tracking feel drastically more responsive.
 * **`LowerBound=60.000000`**: Raising the frame rate smoothing boundary floor to `60` ensures that your system resources prioritize keeping the server running fluidly without allowing sudden drop-offs below standard refresh targets.
 * **`MaxInternetClientRate=104857600`**: This expands the available bandwidth pipe to 100 Megabits per player slot. This is crucial for the new version updates because the 1.0 map size expansion means players flying on fast mounts will load map chunks much faster, which would trigger extreme rubber-banding on default, throttled server limits.
 
