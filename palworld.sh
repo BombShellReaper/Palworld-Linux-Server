@@ -4,7 +4,7 @@
 #                 PALWORLD SYSTEM DEPLOYMENT & AUTOMATION ENGINE
 # ==============================================================================
 # AUTHOR: BombShellReaper
-# REPO: https://github.com
+# REPO: https://github.com/BombShellReaper/Palworld-Linux-Server
 # ==============================================================================
 
 # --- CONFIGURATION (EDIT AS NEEDED) ---
