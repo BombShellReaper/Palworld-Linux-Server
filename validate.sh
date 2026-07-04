@@ -54,7 +54,7 @@ if [ "$success" = true ]; then
 fi
 
 # --- STEP 3: REPO ALIGNED SERVER DIRECTORY VALIDATION ---
-# FIXED: Base template defaults straight to your Step 5 'pw_server' layout configuration
+# Base template defaults straight to your Step 5 'pw_server' layout configuration
 server_dir="$user_home/pw_server"
 echo "Checking for server installation directory at: $server_dir..."
 
@@ -106,7 +106,7 @@ if [ -d "$script_dir" ]; then
         success=false
     fi
 
-    # UPGRADED: Check for the Graceful Shutdown Script (palworld_stop.sh)
+    # Check for the Graceful Shutdown Script (palworld_stop.sh)
     shutdown_script="$script_dir/palworld_stop.sh"
     if [ -f "$shutdown_script" ] && [ -s "$shutdown_script" ]; then
         echo "✅ Graceful shutdown script verified: $shutdown_script" | tee -a "$log_file"
@@ -118,7 +118,7 @@ else
     success=false
 fi    
 
-# --- STEP 6: ADVANCED SYSTEMD SERVICE INTEGRITY CHECK ---
+# --- STEP 6: SYSTEMD SERVICE INTEGRITY CHECK ---
 service_file="/etc/systemd/system/PalWorld.service"
 echo "Scanning for system orchestration layers..." | tee -a "$log_file"
 if [ -f "$service_file" ]; then
