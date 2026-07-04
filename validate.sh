@@ -1,10 +1,11 @@
 #!/bin/bash
 
-
-# This doesn’t verify settings, but confirms that your directories & files exist.
-
-
-
+# ==============================================================================
+#                 PALWORLD INFRASTRUCTURE VALIDATION UTILITY
+# ==============================================================================
+# AUTHOR: BombShellReaper
+# REPO: https://github.com/BombShellReaper/Palworld-Linux-Server
+# ==============================================================================
 
 # Function to prompt for user input
 prompt_user() {
@@ -15,114 +16,129 @@ prompt_user() {
 
 stamp="$(date '+%d-%m-%Y %H:%M:%S')"
 
-# Start of the script
-echo "Starting Palworld server setup verification..."
+echo "========================================================================"
+echo "Starting BombShellReaper Palworld Server Architecture Verification..."
+echo "========================================================================"
 
-# Initialize success flag
+# Initialize overall master status metrics tracking flag
 success=true 
 
-# Establish the username
-username=$(prompt_user "Please enter the username you created: ")
+# --- STEP 1: USER CONTEXT INGESTION ---
+username=$(prompt_user "Please enter the non-sudo username you created: ")
 user_home="/home/$username"
-echo "User home directory is set to: $user_home."
 
-# Establishing the log directory
-logdir=$(prompt_user "Please enter the location of your log directory (relative to the user's home, Example: log): ")
+if [ ! -d "$user_home" ]; then
+    echo "❌ CRITICAL: The user home directory [$user_home] does not exist on this OS."
+    exit 1
+fi
+echo "User home directory verified at: $user_home."
+
+# --- STEP 2: LOG ENVIRONMENT TRACE MAPPING ---
+logdir=$(prompt_user "Please enter the location of your log directory (relative to user home, e.g., logs): ")
 log_dir="$user_home/$logdir"
-echo "Log file directory is set to: $log_dir."
 
-# Verify the log directory
 if [ -d "$log_dir" ]; then
-    echo "The log directory has been verified."
+    echo "✅ The log directory has been verified."
 else
-    echo "The log directory was not located. Please check the location of your log directory and try again." 
+    echo "❌ ERROR: The log directory was not located at: $log_dir"
     success=false
-    exit 1
 fi
 
-# Create the log .txt
+# Initialize runtime tracking audit file
 log_file="$log_dir/verify.txt"
-if [ ! -e "$log_file" ]; then
+if [ "$success" = true ]; then
     touch "$log_file"
-    echo "Log file not found. Creating the log file..."
-    echo "$stamp" | tee "$log_file"
-else 
-    echo "The log file already exists." | tee -a "$log_file"
+    echo "=========================================" > "$log_file"
+    echo "Palworld Verification Audit: $stamp" >> "$log_file"
+    echo "=========================================" >> "$log_file"
 fi
 
-# Validate steam directory 
-server_dir="$user_home/Steam/steamapps/common/PalServer"
-echo "Checking for server directory at: $server_dir."
+# --- STEP 3: REPO ALIGNED SERVER DIRECTORY VALIDATION ---
+# FIXED: Base template defaults straight to your Step 5 'pw_server' layout configuration
+server_dir="$user_home/pw_server"
+echo "Checking for server installation directory at: $server_dir..."
+
 if [ -d "$server_dir" ]; then
-    echo "Server directory exists."
+    echo "✅ Server directory verified." | tee -a "$log_file"
 else
-    custom_server_dir=$(prompt_user "If you changed the server directory, please specify the new path (or press Enter to skip): ") 
-    if [ -n "$custom_server_dir" ]; then
+    echo "⚠️ NOTICE: Default folder structure not found at $server_dir"
+    custom_server_dir=$(prompt_user "If you changed the destination path, enter the custom path (or hit Enter to skip): ") 
+    if [ -n "$custom_server_dir" ] && [ -d "$custom_server_dir" ]; then
         server_dir="$custom_server_dir"
-        echo "Updated server directory to: $server_dir." | tee -a "$log_file"
+        echo "✅ Updated server directory target to: $server_dir" | tee -a "$log_file"
     else    
-        echo "Could not locate $server_dir, please review (Step 5) in GitHub for proper execution of the instructions." | tee -a "$log_file"
-        echo "Server directory does NOT exist. Please review $log_file for instructions." | tee -a "$log_file"
+        echo "❌ CRITICAL: Could not locate server path. Please review (Step 5) in GitHub." | tee -a "$log_file"
         success=false
-        exit 1
     fi
 fi
 
-# Check for PalworldSettings.ini file and that it has content
-settings_file="$server_dir/Pal/Saved/Config/LinuxServer/PalWorldSettings.ini"
-if [ -f "$settings_file" ]; then
-    echo "Settings file exists: $settings_file." | tee -a "$log_file"
-    if [ -s "$settings_file" ]; then
-        echo "Settings file has configs: $settings_file." | tee -a "$log_file"
+# --- STEP 4: CONFIGURATION LAYER INTEGRITY CHECK ---
+if [ "$success" = true ]; then
+    settings_file="$server_dir/Pal/Saved/Config/LinuxServer/PalWorldSettings.ini"
+    if [ -f "$settings_file" ]; then
+        if [ -s "$settings_file" ]; then
+            echo "✅ Settings file exists and has data: $settings_file" | tee -a "$log_file"
+        else
+            echo "❌ ERROR: PalWorldSettings.ini exists but is completely empty. Review (Step 6) on GitHub." | tee -a "$log_file"
+            success=false
+        fi
     else
-        echo "Settings file does NOT have any configs: $settings_file. Go back to (Step 6) in GitHub for proper execution of the instructions." | tee -a "$log_file"
+        echo "❌ ERROR: Could not locate $settings_file. File configuration layer is missing." | tee -a "$log_file"
         success=false
-        exit 1
     fi
-else
-    echo "Could not locate $settings_file, please review (Step 5) in GitHub for proper execution of the instructions." | tee -a "$log_file"
-    echo "Settings file does NOT exist: $settings_file. You may need to create or configure this file." | tee -a "$log_file"
-    success=false
-    exit 1
 fi
 
-# Verify script directory path
-startupscript_dir=$(prompt_user "Please enter the location of your script directory (relative to the user's home, Example: script): ")
-script_dir="$user_home/$startupscript_dir"
-echo "Log script directory is set to: $script_dir."
-echo "Checking for startup script directory at: $script_dir" | tee -a "$log_file"
+# --- STEP 5: AUTOMATION SCRIPT TRACKING ---
+scriptdir=$(prompt_user "Please enter the location of your script directory (relative to user home, e.g., name): ")
+script_dir="$user_home/$scriptdir"
+
+echo "Checking automation directory at: $script_dir..." | tee -a "$log_file"
 if [ -d "$script_dir" ]; then
-    echo "Startup script directory exists." | tee -a "$log_file"
+    echo "✅ Startup script directory exists." | tee -a "$log_file"
+    
+    # Check for the Startup Script (palworld.sh)
+    startup_script_name=$(prompt_user "Please enter the name of your startup script (e.g., palworld.sh): ")
+    startup_script="$script_dir/$startup_script_name"
+    if [ -f "$startup_script" ] && [ -s "$startup_script" ]; then
+        echo "✅ Startup script verified: $startup_script" | tee -a "$log_file"
+    else
+        echo "❌ ERROR: Startup script is missing or empty. Review (Step 7) on GitHub." | tee -a "$log_file"
+        success=false
+    fi
+
+    # UPGRADED: Check for the Graceful Shutdown Script (palworld_stop.sh)
+    shutdown_script="$script_dir/palworld_stop.sh"
+    if [ -f "$shutdown_script" ] && [ -s "$shutdown_script" ]; then
+        echo "✅ Graceful shutdown script verified: $shutdown_script" | tee -a "$log_file"
+    else
+        echo "⚠️ WARNING: palworld_stop.sh was not found. Advanced grace routines disabled." | tee -a "$log_file"
+    fi
 else
-    echo "Startup script directory does NOT exist. You may need to create it." | tee -a "$log_file"
+    echo "❌ ERROR: Startup script directory does not exist. Review (Step 7) on GitHub." | tee -a "$log_file"
     success=false
-    exit 1
 fi    
 
-# Check for the startup script file and that it has content
-startup_script_name=$(prompt_user "Please enter the name of your startup script: ")
-startup_script="$script_dir/$startup_script_name"
-if [ -f "$startup_script" ]; then
-    echo "Startup script exists: $startup_script" | tee -a "$log_file"
-
-    if [ -s "$startup_script" ]; then
-        echo "Startup script has configurations.: $startup_script." | tee -a "$log_file"
-    else
-        echo "Startup script is empty: $startup_script Go back to (Step 7) in GitHub for proper execution of the instructions." | tee -a "$log_file"
-        success=false
-        exit 1
-    fi
+# --- STEP 6: ADVANCED SYSTEMD SERVICE INTEGRITY CHECK ---
+service_file="/etc/systemd/system/PalWorld.service"
+echo "Scanning for system orchestration layers..." | tee -a "$log_file"
+if [ -f "$service_file" ]; then
+    echo "✅ Advanced Systemd Service Unit detected: $service_file" | tee -a "$log_file"
 else
-    echo "Startup script does NOT exist: $startup_script. Go back to (step 7) in GitHub for proper execution of the instructions." | tee -a "$log_file"
-    success=false
-    exit 1
+    echo "ℹ️ Systemd configuration skipped. Service file not deployed to the OS." | tee -a "$log_file"
 fi
 
-# Final message
+# ==============================================================================
+#                             FINAL AUDIT REPORT
+# ==============================================================================
+echo "========================================================================"
 if [ "$success" = true ]; then  
-    echo "Congratulations! Everything looks to be in the right place. This doesn’t verify settings, but confirms that your directories & files exist."
-    rm "$log_file"
+    echo "🎉 CONGRATULATIONS! Your directory structures and file targets match perfectly."
+    echo "Your deployment environment matches the BombShellReaper repository standard."
+    [ -f "$log_file" ] && rm "$log_file"
 else
-    echo "Some checks failed. Please review the log file for details." | tee -a "$log_file"
+    echo "❌ AUTOMATION AUDIT FAILED."
+    echo "Some required infrastructure boundaries are misaligned."
+    echo "Please run: 'cat $log_file' to review the targeted instructions for repair."
     exit 1
 fi
+echo "========================================================================"
