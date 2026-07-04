@@ -66,7 +66,7 @@ log() {
     # --- ACTION 5: INJECT BACKGROUND SCREEN CORE ENGINE ---
     log "Launching PalServer engine inside dedicated Screen background terminal..."
     # Configured with explicit -publicport multi-home capability and -rcon networking flags
-    if /usr/bin/screen -dmS "${INSTANCE_NAME}" "$DIRPATH/PalServer.sh" -port="$SERVER_PORT" -publicport="$SERVER_PORT" -EpicApp=PalServer -rcon -useperfthreads -NoAsyncLoadingThread -UseMultithreadForDS 2>> "$LOGFILE"; then
+    if /usr/bin/screen -dmS "${INSTANCE_NAME}" "$DIRPATH/PalServer.sh" -port="$SERVER_PORT" -publicport="$SERVER_PORT" -EpicApp=PalServer -rcon -useperfthreads -NoAsyncLoadingThread -UseMultithreadForDS -NumberOfWorkerThreadsServer=4 2>> "$LOGFILE"; then
         log "Palworld dedicated instance successfully stabilized in background screen matrix."
     else
         log "CRITICAL: Background terminal layer failed to forge."
