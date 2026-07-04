@@ -42,6 +42,6 @@ NetClientTicksPerSecond=120
 * Always back up your original `Engine.ini` file before applying new custom blocks.
 * For the configuration updates to take effect, recycle your server process using your management scripts:
   ```bash
-  /home/your_username/name/palworld_stop.sh
-  /home/your_username/name/palworld.sh
+  /home/your_username/dir_name/palworld_stop.sh
+  /home/your_username/dir_name/palworld.sh
   ```
