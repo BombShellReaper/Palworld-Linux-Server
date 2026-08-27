@@ -1,66 +1,95 @@
 #!/bin/bash
 
-# ==============================================================================
-#                 PALWORLD HOST OS DEPLOYMENT & MAINTENANCE ENGINE
-# ==============================================================================
-# AUTHOR: BombShellReaper
-# REPO: https://github.com/BombShellReaper/Palworld-Linux-Server
-# ==============================================================================
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
-# --- CONFIGURATION (EDIT AS NEEDED) ---
-LOGFILE="/var/log/palserver_system_maintenance.log"
-WEBHOOK_URL="https://discord.com" # <-- Sanitized generic placeholder
-
-# Ensure log targets exist cleanly
-touch "$LOGFILE"
+# --- Configuration ---
+LOGFILE="/var/log/palworld_system_maintenance.log"
+SERVICE_NAME="PalWorld.service"
+WEBHOOK_URL=""
+IMAGE_URL=""
 
 send_discord_message() {
     local message="$1"
-    local image_url="https://your-image-url.com" # <-- Sanitized generic placeholder
+    local json_payload
+    local emoji="🛠️"
 
-    # Conditional checking rules to inject an image array cleanly into the JSON block
+    if [[ "$message" == *"No updates found"* ]]; then
+        emoji="🛠️ ℹ️"
+    elif [[ "$message" == *"Maintenance Complete"* ]]; then
+        emoji="🛠️ 🔄"
+    elif [[ "$message" == *"Updates Found"* ]]; then
+        emoji="🛠️ ✅"
+    fi
+
     if [[ "$message" == *"Maintenance Started"* ]]; then
-        local image_json="\"image\": { \"url\": \"$image_url\" }"
-        local comma_break=","
+        json_payload=$(cat <<EOF
+{
+    "embeds": [{
+        "title": "$emoji $message",
+        "color": 16711680,
+        "image": { "url": "$IMAGE_URL" },
+        "footer": { "text": "System Maintenance Automation" }
+    }]
+}
+EOF
+)
     else
-        local image_json=""
-        local comma_break=""
+        json_payload=$(cat <<EOF
+{
+    "embeds": [{
+        "title": "$emoji $message",
+        "color": 16711680,
+        "footer": { "text": "System Maintenance Automation" }
+    }]
+}
+EOF
+)
     fi
 
     if [[ -n "$WEBHOOK_URL" ]]; then
-        curl -H "Content-Type: application/json" -X POST -d "{
-            \"embeds\": [{
-                \"title\": \"🛠️ $message\",
-                \"color\": 16711680${comma_break}
-                ${image_json}${comma_break}
-                \"footer\": { \"text\": \"Palworld Host System Maintenance Automation\" }
-            }]
-        }" "$WEBHOOK_URL" > /dev/null 2>&1
+        curl -s -H "Content-Type: application/json" -X POST -d "$json_payload" "$WEBHOOK_URL" > /dev/null 2>&1
     fi
 }
 
-# --- 1. INITIALIZE WEBHOOK & LOG ---
-echo "$(date +'%Y-%m-%d %H:%M:%S') --- STARTING ROOT SYSTEM MAINTENANCE ---" | tee -a "$LOGFILE"
-send_discord_message "Maintenance Started: Checking for OS updates on Palworld host."
+# Redirect standard output and error to both console and this run's logfile
+exec > >(tee -a "$LOGFILE") 2>&1
 
-# --- 2. CHECK AND APPLY LINUX UBUNTU OS UPDATES ---
-echo "Checking for Ubuntu system updates..." | tee -a "$LOGFILE"
-apt-get update > /dev/null
-UPGRADES=$(apt list --upgradable 2>/dev/null | grep -v "Listing...")
+echo "=============================================================================="
+echo "$(date +'%Y-%m-%d %H:%M:%S') --- Starting Palworld Maintenance Sequence ---"
 
-if [ -n "$UPGRADES" ]; then
-    send_discord_message "✅ **Updates Found.** Applying system patches..."
-    echo "Applying upgrades..." | tee -a "$LOGFILE"
-    DEBIAN_FRONTEND=noninteractive apt-get -o Dpkg::Options::="--force-confold" -y full-upgrade >> "$LOGFILE" 2>&1
-    apt-get autoremove -y >> "$LOGFILE" 2>&1
-    echo "Updates applied successfully." | tee -a "$LOGFILE"
+# --- 1. GRACEFULLY STOP THE PALWORLD SERVER (VIA SYSTEMD, WHICH RUNS stop_server.sh) ---
+# The systemd unit's ExecStop= (Step 10) points at stop_server.sh, which
+# handles the countdown, the REST API save/shutdown, and the SIGINT/
+# SIGKILL fallback. Calling systemctl stop here means that logic lives in
+# exactly one place instead of being duplicated across scripts.
+send_discord_message "Maintenance Started: Stopping the Palworld server via systemd..."
+echo "$(date +'%Y-%m-%d %H:%M:%S') Stopping $SERVICE_NAME (delegates to stop_server.sh for graceful shutdown)..."
+if systemctl stop "$SERVICE_NAME"; then
+    echo "$(date +'%Y-%m-%d %H:%M:%S') $SERVICE_NAME stopped successfully."
 else
-    send_discord_message "ℹ️ No updates found. Core OS is clean."
-    echo "No updates found." | tee -a "$LOGFILE"
+    echo "$(date +'%Y-%m-%d %H:%M:%S') WARNING: systemctl stop reported a non-zero exit for $SERVICE_NAME. Continuing anyway — check 'systemctl status $SERVICE_NAME' and stop_server.sh's own log if this is unexpected."
 fi
 
-# --- 3. EXECUTE HARDWARE REBOOT ---
-send_discord_message "🔄 **Maintenance Complete:** Rebooting server. Game servers will auto-restart."
-echo "Maintenance finished. Rebooting system." | tee -a "$LOGFILE"
-sleep 2
+# --- 2. CHECK AND APPLY SYSTEM UPDATES ---
+echo "$(date +'%Y-%m-%d %H:%M:%S') Checking for OS updates..."
+apt-get update > /dev/null
+
+if apt-get upgrade -s 2>/dev/null | grep -q "^Inst"; then
+    send_discord_message "Updates Found. Applying system patches..."
+    echo "$(date +'%Y-%m-%d %H:%M:%S') Applying system upgrades..."
+    DEBIAN_FRONTEND=noninteractive apt-get -o Dpkg::Options::="--force-confold" -y full-upgrade
+    apt-get autoremove -y
+    echo "$(date +'%Y-%m-%d %H:%M:%S') OS updates applied successfully."
+else
+    send_discord_message "No updates found. System is clean."
+    echo "$(date +'%Y-%m-%d %H:%M:%S') No OS updates found."
+fi
+
+# --- 3. REBOOT THE MACHINE ---
+send_discord_message "Maintenance Complete: Rebooting server host. Palworld will auto-update and start on launch."
+echo "$(date +'%Y-%m-%d %H:%M:%S') Maintenance finished. Flushing storage buffers and executing system reboot."
+echo "=============================================================================="
+
+sync
+sleep 10
 reboot
