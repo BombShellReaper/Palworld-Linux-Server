@@ -1,17 +1,36 @@
 [Unit]
-Description=Palworld Server Instance
+Description=Your Palworld Server Instance
 After=network.target network-online.target
 Wants=network-online.target
+StartLimitIntervalSec=60
+StartLimitBurst=3
 
 [Service]
 Type=forking
 User=your_username
 WorkingDirectory=/home/your_username
-ExecStart=/home/your_username/name/palworld.sh
+ExecStart=/home/your_username/.scripts/start_server.sh
+ExecStop=/home/your_username/.scripts/stop_server.sh
+PIDFile=/home/your_username/.run/palserver.pid
+KillMode=control-group
+SendSIGKILL=no
+TimeoutStartSec=600
+TimeoutStopSec=420
 RemainAfterExit=no
-Restart=no
+Restart=always
+RestartSec=60
 StandardOutput=null
 StandardError=null
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/your_username/pw_server
+ReadWritePaths=/home/your_username/.run
+ReadWritePaths=/home/your_username/.flock
+ReadWritePaths=/home/your_username/logs
+ReadWritePaths=/home/your_username/backups
+ReadWritePaths=/home/your_username/.local/share/Steam
 
 [Install]
 WantedBy=multi-user.target
