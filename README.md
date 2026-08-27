@@ -854,6 +854,56 @@ Edit the following line to restrict su. Replace "*group_name*" with the one you 
 > [!TIP]
 > If you want to trigger `start_server.sh`/`stop_server.sh` remotely (e.g. from a control panel or automation tool) without giving that system a general-purpose shell, consider a forced-command SSH key restricted to exactly one script (`command="/home/your_username/.scripts/start_server.sh",restrict ssh-ed25519 ...` in `authorized_keys`) instead of a normal login key. This limits what a leaked key could ever be used for, even in the worst case.
 
+## Lock Down the Operational Scripts
+
+By default, `start_server.sh`, `stop_server.sh`, and `update_checker.sh` are owned by the same user (`your_username`) that the game process itself runs as. If the running Palworld binary is ever compromised, that account's write access means an attacker could overwrite these scripts with malicious code - the next time systemd or cron triggers them, your own automation would execute the attacker's payload instead.
+
+Root-owning the scripts (while leaving them executable by the game user) closes this off, and costs nothing in ongoing maintenance since it's a one-time change:
+
+    sudo chown root:your_username /home/your_username/.scripts
+    sudo chmod 750 /home/your_username/.scripts
+    sudo chown root:your_username /home/your_username/.scripts/*.sh
+    sudo chmod 750 /home/your_username/.scripts/*.sh
+
+> [!Important]
+> Both the **directory** and the **files** need this treatment. Locking down only the files isn't enough - if the directory itself is still writable by `your_username`, an attacker can simply delete and recreate a script even though they can't write to the original file's contents.
+
+> [!Note]
+> After this change, you (or any tooling you use) will need `sudo` to edit these scripts going forward - `nano start_server.sh` as the game user will fail with a permissions error. That's the intended effect.
+
+## Sandbox the systemd Service
+
+Beyond who owns what, systemd itself can restrict what the running process is *allowed to touch at the kernel level*, regardless of file ownership - blocking it from reading unrelated system files, writing outside a declared set of paths, or gaining new privileges, even if the binary itself is compromised.
+
+Add the following under `[Service]` in `/etc/systemd/system/PalWorld.service` (Step 10), alongside your existing directives:
+
+    NoNewPrivileges=true
+    PrivateTmp=true
+    ProtectSystem=strict
+    ProtectHome=read-only
+    ReadWritePaths=/home/your_username/pw_server
+    ReadWritePaths=/home/your_username/.run
+    ReadWritePaths=/home/your_username/.flock
+    ReadWritePaths=/home/your_username/logs
+    ReadWritePaths=/home/your_username/backups
+    ReadWritePaths=/home/your_username/.local/share/Steam
+
+> [!Caution]
+> `ProtectSystem=strict` and `ProtectHome=read-only` make essentially the entire filesystem read-only to this service by default - every path it needs to write to must be listed explicitly via `ReadWritePaths=`, or the write will fail silently and something will break (most likely SteamCMD's own update step, or the backup/log/PID-file writes). The `.local/share/Steam` path above is SteamCMD's own cache/state directory and is easy to miss - if you installed SteamCMD differently, confirm its actual data path first (check for `~/.steam`, `~/Steam`, or `~/.local/share/Steam` under your game user's home).
+
+**Test before trusting this in production.** Reload and restart, then watch a full cycle closely:
+
+    sudo systemctl daemon-reload
+    sudo systemctl restart PalWorld.service
+    sudo systemctl status PalWorld.service
+    sudo journalctl -u PalWorld.service -f
+
+Trigger `update_checker.sh` manually (or wait for its next scheduled run) and confirm the backup, SteamCMD update, and relaunch all still complete successfully - this is exactly the kind of change that fails quietly as "the server won't restart after the next update," discovered by players rather than by you, if a needed path was missed.
+
+You can also ask systemd itself to grade the unit's exposure before and after:
+
+    sudo systemd-analyze security PalWorld.service
+
 **Conclusion**
 
 You have successfully set up a hardened Palworld server with automated backups, graceful updates, and a systemd service that correctly tracks the real game process. For further customization, refer to the game's official documentation.
