@@ -5,7 +5,7 @@
 
 **Overview**
 
-This is a step-by-step guide on how to set up and run a Ubuntu Palworld server.
+This is a step-by-step guide on how to set up and run a Ubuntu Palworld server, including a hardened backup/update/start pipeline, a REST API-based graceful stop, an automated update checker, and a systemd unit that correctly tracks the real game process.
 
 **Prerequisites**
 
@@ -14,7 +14,7 @@ This is a step-by-step guide on how to set up and run a Ubuntu Palworld server.
 - A user with sudo privileges
 
 > [!Caution]
-> Directory structures may differ based on your specific setup.
+> Directory structures may differ based on your specific setup. Paths below assume the server user is `steam` and the install directory is `/home/steam/pw_server` - adjust to match your own setup.
 
 # Step 1: Update and Upgrade Your System
 
@@ -30,7 +30,7 @@ This is a step-by-step guide on how to set up and run a Ubuntu Palworld server.
 
     sudo apt install screen -y
 
-**Install OpenSSH Sever**
+**Install OpenSSH Server**
 
 This enables secure remote access to your server.
 
@@ -46,14 +46,14 @@ This enables secure remote access to your server.
 --------------------------------------------------------------------------------
 # Step 3: Configure UFW (Uncomplicated Firewall)
 
-Allow all incoming connections to port 8211:
+Allow all incoming connections to the game port (adjust 8211 if you use a custom port):
 
     sudo ufw allow from any proto udp to any port 8211 comment "Palworld Server Port"
 
 > [!TIP]
- For added security, change "any" to a specific IP address or range.
+> For added security, change "any" to a specific IP address or range.
 
-Allow all incoming connections to port 27015:
+Allow all incoming connections to the query port:
 
     sudo ufw allow from any proto udp to any port 27015 comment "Palworld Query Port"
 
@@ -67,6 +67,9 @@ Allow all incoming connections to port 27015:
 > [!TIP]
 > For added security, change "any" to a specific IP address or range.
 
+> [!Important]
+> Do **not** open the REST API port (default 8212) to the internet. The stop script and update checker in this guide talk to the API over `127.0.0.1` only - there is no reason for it to ever be reachable from outside the box, and exposing it would let anyone who finds the port attempt to authenticate against your AdminPassword directly.
+
 Set the default rule to deny incoming traffic (Optional)
 
     sudo ufw default deny incoming
@@ -78,7 +81,7 @@ Set the default rule to deny incoming traffic (Optional)
 Check the UFW status after enabling it:
 
     sudo ufw status
-    
+
 --------------------------------------------------------------------------------
 # Step 4: Create a Non Sudo User
 
@@ -106,11 +109,12 @@ Replace "*your_username*" with the desired username.
 
     cd pw_server
 
-**Start the server**
+**Start the server once, manually, to generate its config files**
 
     ./PalServer.sh -useperfthreads -NoAsyncLoadingThread -UseMultithreadForDS
 
-Stop the server with Ctrl + C.
+Stop the server with Ctrl + C once you see it finish loading. This first run creates `PalWorldSettings.ini` and the default save data - you'll edit that file in the next step, then hand the server off to the automated scripts in Step 7 onward rather than starting it manually again.
+
 --------------------------------------------------------------------------------
 # Step 6: Configure the Server
 
@@ -130,11 +134,19 @@ ServerName=""
 
 ServerDescription="" (optional)
 
-AdminPassword="" (optional)
+AdminPassword="" (optional, but **required** if you want RESTAPIEnabled below to actually work - the API uses this as its Basic Auth password)
 
 ServerPassword="" (optional)
 
 PublicIP=""
+
+> [!Important]
+> **Set these two explicitly if you plan to use the stop script / update checker in Step 8 and Step 9:**
+>
+>     RESTAPIEnabled=True
+>     RESTAPIPort=8212
+>
+> The graceful stop script in this guide talks to the server over this REST API (`announce`, `save`, `shutdown`). If it's left at the default `RESTAPIEnabled=False`, the stop script's API calls will fail silently and it will fall back to a hard `SIGINT`/`SIGKILL` on the process instead of a clean shutdown.
 
 > [!Important]
 > The file should have two lines and if you use nano it should look something like this.
@@ -146,107 +158,506 @@ PublicIP=""
 
     nano /home/your_username/Steam/steamapps/common/PalServer/DefaultPalWorldSettings.ini
 
---------------------------------------------------------------------------------
-# Step 7: Create a Startup Script (Optional)
+**Verify the API is actually reachable before moving on**
 
-Return to the users home directory
+Start the server once more, then from another terminal:
+
+    curl -s -u admin:YOUR_ADMIN_PASSWORD http://127.0.0.1:8212/v1/api/info
+
+You should get back a JSON blob with your server name and version. If you get a connection refused, double check `RESTAPIEnabled`/`RESTAPIPort` are set and that you've restarted the server since editing the file.
+
+--------------------------------------------------------------------------------
+# Step 7: Create the Start Script
+
+Return to the user's home directory
 
     cd
 
-Create a directory to place you scripts. Change the "*name*" with your desired directory name:
+Create a directory for your scripts:
 
-    mkdir name
+    mkdir .scripts
 
-Change to the new directory. Change the "*name*" with the one you just created:
+Change to the new directory:
 
-    cd name
+    cd .scripts
 
-Create a script. Change the "*name.sh*" with your desired script name.
+Create the start script:
 
-    nano name.sh
+    nano start_server.sh
 
-Copy and edit the following script:
+Copy and edit the following script - update `INSTANCE_NAME`, `SERVER_PORT`, `DIRPATH`, `BACKUP_DIR`, and `LOG_DIR` to match your setup:
 
     #!/bin/bash
+    set -o pipefail
 
-    #set -x     # Uncomment to enable debug output. This will show you each command as it’s executed, which can help identify where it fails
+    #set -x     # Uncomment to enable debug output.
 
-    # Log file
-    LOGFILE="/path/to/your/logfile.txt"  # Update with your log file path
-    DIRPATH="/path/to/your/server" # Update with the directory containing "*name.sh*"
+    INSTANCE_NAME="Palworld"
+    SERVER_PORT="8211"
+    DIRPATH="/home/your_username/pw_server"
+    STEAMUSERNAME="anonymous"
+    BACKUP_DIR="/home/your_username/backups"
+    TIMESTAMP=$(date '+%Y-%m-%d_%H%M%S')
+    LOG_DIR="/home/your_username/logs"
+    LOGFILE="$LOG_DIR/palserver_$TIMESTAMP.log"
 
-    # Create the log directory if it doesn't exist
-    LOGDIR=$(dirname "$LOGFILE")
-    mkdir -p "$LOGDIR"
+    # PID tracking (for real process verification / systemd integration)
+    PID_DIR="/home/your_username/.run"
+    PID_FILE="$PID_DIR/palserver.pid"
+    GAME_PROCESS_NAME="PalServer-Linux-Shipping"
 
-    # Create the log file if it doesn't exist
-    touch "$LOGFILE"
+    mkdir -p "$LOG_DIR"
+    mkdir -p "$BACKUP_DIR"
+    mkdir -p "$PID_DIR"
 
-    # Function to log messages with date/time
+    # --- SELF-LOCK: prevent overlapping invocations from racing the duplicate check ---
+    # Without this, two near-simultaneous calls to this script (from systemd,
+    # a control panel, cron, or a manual run) could both pass the duplicate
+    # check below before either has actually launched anything, resulting in
+    # two real game processes running at once.
+    LOCK_DIR="/home/your_username/.flock"
+    LOCK_FILE="$LOCK_DIR/start_server.lock"
+    mkdir -p "$LOCK_DIR"
+
+    exec 200>"$LOCK_FILE"
+    if ! flock -n 200; then
+        echo "$(date '+%Y-%m-%d %H:%M:%S') - Another instance of start_server.sh is already running (lock held). Exiting cleanly."
+        exit 0
+    fi
+
+    # Everything below is piped through `tee -a "$LOGFILE"`, so a plain echo
+    # here already reaches both the console and the log file.
     log() {
-    echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" >> "$LOGFILE"
+        echo "$(date '+%Y-%m-%d %H:%M:%S') - $1"
     }
 
-    # Update PalWorld using steamcmd
     {
-            log "Updating PalWorld..."
-        if /usr/games/steamcmd +force_install_dir "$DIRPATH" +login anonymous +app_update 2394010 validate +quit; then
-            log "Update completed."
-        else
-            log "Update failed."
+        # --- STEP 0: DUPLICATE SCREEN SESSION PROTECTION ---
+        if /usr/bin/screen -list | grep -q "\.${INSTANCE_NAME}[[:space:]]"; then
+            log "'${INSTANCE_NAME}' is already running in an active Screen session. Nothing to do."
+            # Exit 0, not 1: with Type=forking + Restart=always in the systemd
+            # unit, a non-zero exit here would be read as a failed start and
+            # trigger an endless restart loop against a server that is
+            # actually healthy.
+            exit 0
         fi
 
-        # Start the PalWorld server
-            log "Starting PalWorld server..."
-        if /usr/bin/screen -dmS PalWorld "$DIRPATH/PalServer.sh" -useperfthreads -NoAsyncLoadingThread -UseMultithreadForDS -PublicLobby 2>> "$LOGFILE"; then
-            log "PalWorld server started successfully."
+        # --- STEP 1: BACKUP & LOG ROTATION ---
+        log "Initiating pre-update Palworld backup (Saves and Configurations)..."
+        if [ -d "$DIRPATH/Pal/Saved/SaveGames" ] && [ -d "$DIRPATH/Pal/Saved/Config" ]; then
+            tar -czf "$BACKUP_DIR/palserver_backup_$TIMESTAMP.tar.gz" \
+                -C "$DIRPATH/Pal/Saved" SaveGames/ Config/
+            if [ $? -eq 0 ]; then
+                log "Backup successfully created: palserver_backup_$TIMESTAMP.tar.gz"
+            else
+                log "Warning: Backup compression encountered errors."
+            fi
         else
-            log "Failed to start PalWorld server."
-            exit 1  # Exit if the server fails to start
+            log "Warning: Mandatory Palworld data directories not found. Skipping backup step."
+        fi
+
+        log "Enforcing 30-day backup retention rotation policy..."
+        find "$BACKUP_DIR" -name "palserver_backup_*.tar.gz" -type f -mtime +30 -exec rm -f {} \;
+        log "Backup rotation check complete."
+
+        log "Enforcing 30-day individual log retention rotation policy..."
+        find "$LOG_DIR" -name "palserver_*.log" -type f -mtime +30 -exec rm -f {} \;
+        log "Log rotation check complete."
+
+        # --- STEP 2: GAME ENGINE SOFTWARE UPDATE ---
+        log "Updating Palworld Server..."
+        if /usr/games/steamcmd +force_install_dir "$DIRPATH" +login "$STEAMUSERNAME" +app_update 2394010 validate +quit; then
+            log "Update completed successfully."
+        else
+            log "Critical Error: SteamCMD core game update failed. Aborting lifecycle to prevent mismatched version errors."
+            exit 1
+        fi
+
+        # --- STEP 3: START APPLICATION WINDOW ---
+        log "Starting Palworld server inside Screen session on port $SERVER_PORT..."
+        /usr/bin/screen -dmS "$INSTANCE_NAME" "$DIRPATH/PalServer.sh" -port="$SERVER_PORT" -publicport="$SERVER_PORT" -useperfthreads -NoAsyncLoadingThread -UseMultithreadForDS -PublicLobby
+
+        sleep 5
+
+        if /usr/bin/screen -list | grep -q "\.${INSTANCE_NAME}[[:space:]]"; then
+            log "Screen session is alive. Verifying the actual game process next..."
+        else
+            log "Critical Error: Failed to start Palworld screen session."
+            exit 1
+        fi
+
+        # --- STEP 3.5: CAPTURE THE ACTUAL GAME PROCESS PID ---
+        # A live screen session doesn't guarantee the game itself came up (a
+        # failed update or bad config can crash it on load while the wrapper
+        # session stays open). This confirms the real binary is running and
+        # records its PID for systemd to track.
+        log "Waiting for $GAME_PROCESS_NAME to appear so we can confirm the server actually started..."
+        PID_WAIT_MAX=60
+        PID_WAIT_COUNT=0
+        GAME_PID=""
+
+        while [ -z "$GAME_PID" ] && [ $PID_WAIT_COUNT -lt $PID_WAIT_MAX ]; do
+            GAME_PID=$(pgrep -f "$GAME_PROCESS_NAME" | head -n1)
+            if [ -z "$GAME_PID" ]; then
+                sleep 1
+                ((PID_WAIT_COUNT++))
+            fi
+        done
+
+        if [ -n "$GAME_PID" ]; then
+            echo "$GAME_PID" > "$PID_FILE"
+            log "Palworld server started successfully in background (PID $GAME_PID)."
+        else
+            log "Critical Error: Screen session is up, but $GAME_PROCESS_NAME never appeared after ${PID_WAIT_MAX}s."
+            log "Check the game log for the actual failure cause."
+            exit 1
         fi
     } 2>&1 | tee -a "$LOGFILE"
 
-Make the script executable by the user:
+Make the script executable:
 
-    chmod u+x palworld.sh
+    chmod u+x start_server.sh
 
 --------------------------------------------------------------------------------
-# Step 8: Create a Systemd Service (Optional)
+# Step 8: Create the Stop Script
 
-Switch to your sudo user that you used at the beginning. Replace "*your_username*" with the actual username.
+The server's REST API (enabled in Step 6) is the correct way to shut it down gracefully - it lets you warn players before the server actually goes down and triggers a proper world save, instead of just killing the process.
 
-    su your_username
+    nano stop_server.sh
 
-**Create the service file:**
+Copy and edit the following - update `API_PASS` to match the `AdminPassword` you set in `PalWorldSettings.ini`, and update paths to match your setup:
+
+    #!/bin/bash
+    set -o pipefail
+
+    INSTANCE_NAME="Palworld"
+    GAME_PROCESS_NAME="PalServer-Linux-Shipping"
+
+    API_IP="127.0.0.1"
+    API_PORT="8212"
+    API_USER="admin"
+    API_PASS="YOUR_ADMIN_PASSWORD"
+
+    TIMESTAMP=$(date '+%Y-%m-%d_%H%M%S')
+    LOG_DIR="/home/your_username/logs"
+    LOGFILE="$LOG_DIR/palserver_stop_$TIMESTAMP.log"
+
+    PID_DIR="/home/your_username/.run"
+    PID_FILE="$PID_DIR/palserver.pid"
+
+    mkdir -p "$LOG_DIR"
+
+    log() {
+        echo "$(date '+%Y-%m-%d %H:%M:%S') - $1"
+    }
+
+    # Native Python REST API sender. Uses a heredoc for the JSON body so
+    # messages containing an apostrophe don't break the embedded Python
+    # string literal.
+    send_api_cmd() {
+        local endpoint="$1"
+        local json_body="$2"
+        python3 -c "
+    import urllib.request
+    import base64
+
+    ip = '$API_IP'
+    port = '$API_PORT'
+    user = '$API_USER'
+    password = '$API_PASS'
+    endpoint = '$endpoint'
+    body_str = \"\"\"$json_body\"\"\"
+
+    url = f'http://{ip}:{port}/v1/api/{endpoint}'
+    req = urllib.request.Request(url, method='POST')
+    req.add_header('Content-Type', 'application/json')
+
+    auth_str = f'{user}:{password}'
+    auth_encoded = base64.b64encode(auth_str.encode('utf-8')).decode('utf-8')
+    req.add_header('Authorization', f'Basic {auth_encoded}')
+
+    try:
+        data = body_str.encode('utf-8') if body_str else None
+        with urllib.request.urlopen(req, data=data, timeout=5) as response:
+            print(response.read().decode('utf-8'))
+    except Exception as e:
+        print(f'API error on /{endpoint}: {e}')
+    "
+    }
+
+    {
+        find "$LOG_DIR" -name "palserver_stop_*.log" -type f -mtime +30 -exec rm -f {} \;
+        log "Stop log rotation check complete."
+
+        if /usr/bin/screen -list | grep -q "\.${INSTANCE_NAME}[[:space:]]"; then
+            log "Active ${INSTANCE_NAME} session discovered. Initializing graceful countdown..."
+
+            send_api_cmd "announce" '{"message": "Server shutting down in 5 minutes! Please prepare."}'
+            sleep 120
+            send_api_cmd "announce" '{"message": "Server shutting down in 3 minutes! Find a safe spot."}'
+            sleep 120
+            send_api_cmd "announce" '{"message": "Server shutting down in 60 seconds! Please log out."}'
+            sleep 30
+            send_api_cmd "announce" '{"message": "Server shutting down in 30 seconds!"}'
+            sleep 20
+            send_api_cmd "announce" '{"message": "Saving world state..."}'
+
+            log "Triggering world save via API..."
+            send_api_cmd "save" ""
+            sleep 10
+
+            log "Sending shutdown signal to Palworld core engine..."
+            send_api_cmd "shutdown" '{"waittime": 1, "message": "Server_is_stopping_for_maintenance"}'
+
+            # --- VERIFY THE ACTUAL PROCESS EXITS ---
+            # The API accepting the shutdown call doesn't guarantee the
+            # process actually terminates - poll for it directly.
+            SHUTDOWN_WAIT_MAX=45
+            SHUTDOWN_WAIT_COUNT=0
+            while pgrep -f "$GAME_PROCESS_NAME" > /dev/null && [ $SHUTDOWN_WAIT_COUNT -lt $SHUTDOWN_WAIT_MAX ]; do
+                sleep 1
+                ((SHUTDOWN_WAIT_COUNT++))
+            done
+
+            SERVER_PID=$(pgrep -f "$GAME_PROCESS_NAME")
+            if [ -n "$SERVER_PID" ]; then
+                log "Process still alive after API shutdown attempt (${SHUTDOWN_WAIT_COUNT}s). Sending SIGINT to PID $SERVER_PID..."
+                kill -SIGINT "$SERVER_PID"
+                sleep 15
+                if kill -0 "$SERVER_PID" 2>/dev/null; then
+                    log "Still running after SIGINT. Force killing as last resort (possible data loss)."
+                    kill -9 "$SERVER_PID"
+                else
+                    log "Process exited cleanly after SIGINT fallback."
+                fi
+            else
+                log "Process exited cleanly after API shutdown (${SHUTDOWN_WAIT_COUNT}s)."
+            fi
+
+            if /usr/bin/screen -list | grep -q "\.${INSTANCE_NAME}[[:space:]]"; then
+                log "Screen session still present. Force closing."
+                /usr/bin/screen -S "$INSTANCE_NAME" -X quit
+            fi
+
+            if [ -f "$PID_FILE" ]; then
+                rm -f "$PID_FILE"
+                log "Removed stale PID file."
+            fi
+
+            log "Palworld engine instance safely terminated."
+        else
+            log "No active server screen found. Lifecycle step skipped."
+        fi
+    } 2>&1 | tee -a "$LOGFILE"
+
+Make it executable:
+
+    chmod u+x stop_server.sh
+
+> [!TIP]
+> Confirm the countdown timing actually fits your comfort level before relying on it - the full sequence above (5 min → 3 min → 60s → 30s → save → shutdown) takes about 5 minutes from the first warning to the shutdown command being sent.
+
+--------------------------------------------------------------------------------
+# Step 9: Create an Automated Update Checker (Optional)
+
+This periodically checks Steam for a new server version, and if one is found, gracefully stops the server (Step 8), lets systemd (Step 10) bring it back up with the new version, and falls back to starting it manually if systemd doesn't.
+
+    nano update_checker.sh
+
+Copy and edit the following, updating paths and `WEBHOOK_URL` (optional, for Discord alerts) to match your setup:
+
+    #!/bin/bash
+
+    set -o pipefail
+
+    GAME_NAME="Palworld"
+    STEAM_APP_ID="2394010"
+    SERVER_DIR="/home/your_username/pw_server"
+    STEAMCMD="/usr/games/steamcmd"
+    STOP_SCRIPT="/home/your_username/.scripts/stop_server.sh"
+    START_SCRIPT="/home/your_username/.scripts/start_server.sh"
+    SCREEN_NAME="Palworld"
+    RESTART_POLL_MAX_WAIT=180
+    TIMESTAMP=$(date '+%Y-%m-%d_%H%M%S')
+    LOG_DIR="/home/your_username/logs"
+    LOG_FILE="palserver_update_$TIMESTAMP.log"
+    WEBHOOK_URL=""
+    IMAGE_URL=""
+    DISCORD_FOOTER="Server Maintenance Automation"
+
+    VERSION_FILE="$SERVER_DIR/current_version.txt"
+    MANIFEST_FILE="$SERVER_DIR/steamapps/appmanifest_${STEAM_APP_ID}.acf"
+    FULL_LOG_PATH="$LOG_DIR/$LOG_FILE"
+
+    mkdir -p "$LOG_DIR"
+
+    log() {
+        echo "$1"
+    }
+
+    send_discord_message() {
+        local message="$1"
+        local json_payload
+        local emoji="🛠️"
+
+        if [[ "$message" == *"No updates found"* ]]; then
+            emoji="🛠️ ℹ️"
+        elif [[ "$message" == *"Maintenance Complete"* ]]; then
+            emoji="🛠️ 🔄"
+        elif [[ "$message" == *"Updates Found"* ]]; then
+            emoji="🛠️ ✅"
+        elif [[ "$message" == *"Maintenance Failed"* ]]; then
+            emoji="🛠️ ❌"
+        fi
+
+        if [[ "$message" == *"Maintenance Started"* ]]; then
+            json_payload=$(cat <<EOF
+    {
+        "embeds": [{
+            "title": "$emoji $message",
+            "color": 16711680,
+            "image": { "url": "$IMAGE_URL" },
+            "footer": { "text": "$DISCORD_FOOTER" }
+        }]
+    }
+    EOF
+    )
+        else
+            json_payload=$(cat <<EOF
+    {
+        "embeds": [{
+            "title": "$emoji $message",
+            "color": 16711680,
+            "footer": { "text": "$DISCORD_FOOTER" }
+        }]
+    }
+    EOF
+    )
+        fi
+
+        if [[ -n "$WEBHOOK_URL" ]]; then
+            curl -s -H "Content-Type: application/json" -X POST -d "$json_payload" "$WEBHOOK_URL" > /dev/null 2>&1
+        fi
+    }
+
+    {
+        # Adjust the mtime value below if this doesn't run every 30 minutes.
+        find "$LOG_DIR" -name "palserver_update_*.log" -type f -mtime +3 -exec rm -f {} \;
+        log "$(date '+%Y-%m-%d %H:%M:%S') - Update-checker log rotation check complete."
+
+        # Read the true installed version from disk (not just a tracking file)
+        if [ -f "$MANIFEST_FILE" ]; then
+            REAL_INSTALLED_VERSION=$(grep '"buildid"' "$MANIFEST_FILE" | awk -F '"' '{print $4}' | tr -d '[:space:]')
+        else
+            log "$(date '+%Y-%m-%d %H:%M:%S') - CRITICAL ERROR: Steam manifest missing at $MANIFEST_FILE."
+            exit 1
+        fi
+
+        if [ ! -f "$VERSION_FILE" ] || [ ! -s "$VERSION_FILE" ]; then
+            echo "$REAL_INSTALLED_VERSION" > "$VERSION_FILE"
+        fi
+
+        LOCAL_VERSION=$(cat "$VERSION_FILE" | tr -d '[:space:]')
+        if [ "$LOCAL_VERSION" != "$REAL_INSTALLED_VERSION" ]; then
+            echo "$REAL_INSTALLED_VERSION" > "$VERSION_FILE"
+            LOCAL_VERSION="$REAL_INSTALLED_VERSION"
+        fi
+
+        LATEST_VERSION=$("$STEAMCMD" +login anonymous +app_info_update 1 +app_info_print "$STEAM_APP_ID" +quit | \
+            awk '/"public"/ {flag=1; next} /}/ && flag {flag=0} flag' | \
+            grep '"buildid"' | awk -F '"' '{print $4}' | tr -d '[:space:]')
+
+        if [ $? -ne 0 ] || [ -z "$LATEST_VERSION" ]; then
+            log "$(date '+%Y-%m-%d %H:%M:%S') - Error: SteamCMD API query failed. Skipping check."
+            exit 1
+        fi
+
+        if [ "$LATEST_VERSION" -gt "$LOCAL_VERSION" ]; then
+            send_discord_message "Maintenance Started: Updates Found on SteamCMD for $GAME_NAME. Initializing patching pipeline."
+            log "$(date +'%Y-%m-%d %H:%M:%S') Executing established graceful shutdown script..."
+            bash "$STOP_SCRIPT"
+
+            echo "$LATEST_VERSION" > "$VERSION_FILE"
+            log "$(date +'%Y-%m-%d %H:%M:%S') Version file updated to Build ID: $LATEST_VERSION."
+            log "$(date +'%Y-%m-%d %H:%M:%S') Server process terminated. Waiting for systemd auto-restart to bring it back..."
+
+            POLL_COUNT=0
+            while ! screen -list | grep -q "\.${SCREEN_NAME}[[:space:]]" && [ $POLL_COUNT -lt $RESTART_POLL_MAX_WAIT ]; do
+                sleep 2
+                ((POLL_COUNT++))
+            done
+
+            if screen -list | grep -q "\.${SCREEN_NAME}[[:space:]]"; then
+                log "$(date +'%Y-%m-%d %H:%M:%S') Systemd auto-restart succeeded — server back online after $((POLL_COUNT*2))s."
+            else
+                log "$(date +'%Y-%m-%d %H:%M:%S') WARNING: No screen session detected after $((RESTART_POLL_MAX_WAIT*2))s. Falling back to manual start..."
+                send_discord_message "Maintenance Failed: Systemd auto-restart did not bring $GAME_NAME back — falling back to manual start."
+                bash "$START_SCRIPT"
+                sleep 5
+                if screen -list | grep -q "\.${SCREEN_NAME}[[:space:]]"; then
+                    log "$(date +'%Y-%m-%d %H:%M:%S') Manual fallback start succeeded — server is back online."
+                else
+                    log "$(date +'%Y-%m-%d %H:%M:%S') CRITICAL ERROR: Manual fallback also failed. Server is likely DOWN."
+                    send_discord_message "Maintenance Failed: Manual fallback start also failed. Server is likely DOWN — manual intervention required."
+                    exit 1
+                fi
+            fi
+        else
+            log "$(date '+%Y-%m-%d %H:%M:%S') - $GAME_NAME engine fully optimized and up to date."
+        fi
+    } 2>&1 | tee -a "$FULL_LOG_PATH"
+
+Make it executable, then add it to your crontab to run on a schedule (every 30 minutes below):
+
+    chmod u+x update_checker.sh
+    crontab -e
+
+Add this line:
+
+    */30 * * * * flock -n /home/your_username/.flock/update_checker.lock /home/your_username/.scripts/update_checker.sh
+
+--------------------------------------------------------------------------------
+# Step 10: Create a Systemd Service
 
     sudo nano /etc/systemd/system/PalWorld.service
 
-**Add the following configuration:**
+**Add the following configuration** - replace `your_username` throughout:
 
     [Unit]
-    Description=Your Application Description
-    After=network.target
-
-    [Service]
-    Type=simple
-    User=youruser         # Replace with the username you created in the beginning
-    ExecStart=/path/to/your/executable/startup/script.sh      # Replace with your full script path
-    RemainAfterExit=yes
-    Restart=on-failure
-    RestartSec=5
+    Description=Your Palworld Server Instance
+    After=network.target network-online.target
+    Wants=network-online.target
     StartLimitIntervalSec=60
     StartLimitBurst=3
-    StandardOutput=append:/var/log/yourapp.log
-    StandardError=append:/var/log/yourapp.log
+
+    [Service]
+    Type=forking
+    User=your_username
+    WorkingDirectory=/home/your_username
+    ExecStart=/home/your_username/.scripts/start_server.sh
+    ExecStop=/home/your_username/.scripts/stop_server.sh
+    PIDFile=/home/your_username/.run/palserver.pid
+    KillMode=control-group
+    SendSIGKILL=no
+    TimeoutStartSec=600
+    TimeoutStopSec=420
+    RemainAfterExit=no
+    Restart=always
+    RestartSec=60
+    StandardOutput=null
+    StandardError=null
 
     [Install]
     WantedBy=multi-user.target
 
-> **Example**
-> 
-> User=test
-> 
-> ExecStart=/home/test/scripts/palworld.sh
+> [!Important]
+> A few things in this unit differ from what you may see in other guides, each for a specific reason:
+>
+> - **`Type=forking` + `PIDFile=`** (not `Type=simple`): the script launches the real game inside a detached `screen` session and exits itself, so systemd needs to track the actual game PID written to `PIDFile`, not the script's own process.
+> - **`ExecStop=` points at `stop_server.sh`**: this is what makes `systemctl stop`/`systemctl restart` trigger the graceful REST API shutdown from Step 8, instead of systemd just sending a raw kill signal to the process group.
+> - **`Restart=always`, not `Restart=on-failure`**: `on-failure` does *not* count a clean `SIGINT`-terminated exit as a failure, which is exactly how the stop script's fallback (and Ctrl+C in general) terminates the process. Under `on-failure`, a perfectly normal graceful stop will never trigger systemd's own auto-restart - only `always` restarts regardless of how the process exited.
+> - **`RestartSec=60`, `TimeoutStartSec=600`**: sized to give `start_server.sh`'s full backup+update+launch+PID-verify sequence real room to complete before systemd gives up. Treat these as a starting point - once you've watched a real run's timing in your own logs, tighten them to match.
+> - **`StartLimitIntervalSec=60` / `StartLimitBurst=3`**: caps systemd to 3 restart attempts in any 60-second window before it gives up and marks the unit `failed`, instead of retrying forever. This is a safety net, not something you should expect to hit during normal operation - a single update cycle only ever counts as one restart.
 
 **Enable and Start the Service**
 
@@ -254,11 +665,13 @@ Switch to your sudo user that you used at the beginning. Replace "*your_username
     sudo systemctl enable PalWorld.service
     sudo systemctl start PalWorld.service
 
-> [!Important]
->  *This systemd service, along with the accompanying script, ensures that your server automatically starts after a reboot and updates itself before launching.*
+**Confirm it actually started cleanly**
+
+    sudo systemctl status PalWorld.service
+    cat /home/your_username/.run/palserver.pid
 
 --------------------------------------------------------------------------------
-# Step 9: Hardening (Optional)
+# Step 11: Hardening (Optional)
 
 Login with the sudo user and edit the sshd_config file
 
@@ -276,9 +689,9 @@ Locate the following lines and uncomment them, making the specified edits:
 
  **#MaxSessions 10**
 
-    Max Sessions 4
+    MaxSessions 4
 
-Reload systemctl & restart sshd.services
+Reload systemctl & restart sshd.service
 
     sudo systemctl daemon-reload
     sudo systemctl restart ssh.service
@@ -303,24 +716,26 @@ Edit the *su* config
 
     sudo nano /etc/pam.d/su
 
-Edit the following line to restrict su. Replace "*group_name*" with the one you made ealier.
+Edit the following line to restrict su. Replace "*group_name*" with the one you made earlier.
 
     auth       required   pam_wheel.so group=group_name
 
 > **Example:** *auth       required   pam_wheel.so group=restrictedsu*
 
-**Example:** 
+**Example:**
 
 ![image](https://github.com/user-attachments/assets/3d3c941b-aadd-4bdb-b736-e2fb4c7b5c8b)
 
+> [!TIP]
+> If you want to trigger `start_server.sh`/`stop_server.sh` remotely (e.g. from a control panel or automation tool) without giving that system a general-purpose shell, consider a forced-command SSH key restricted to exactly one script (`command="/home/your_username/.scripts/start_server.sh",restrict ssh-ed25519 ...` in `authorized_keys`) instead of a normal login key. This limits what a leaked key could ever be used for, even in the worst case.
 
 **Conclusion**
 
-You have successfully set up your Palworld server! For further customization, refer to the game’s official documentation.
-
+You have successfully set up a hardened Palworld server with automated backups, graceful updates, and a systemd service that correctly tracks the real game process. For further customization, refer to the game's official documentation.
 
 **References**
 - https://developer.valvesoftware.com/wiki/SteamCMD#Linux
 - https://tech.palworldgame.com/getting-started/deploy-dedicated-server/
+- https://tech.palworldgame.com/settings-and-operation/rest-api/
 - https://www.digitalocean.com/community/tutorials/ufw-essentials-common-firewall-rules-and-commands
 - https://tech.palworldgame.com/settings-and-operation/configuration/
