@@ -71,8 +71,12 @@ Stop with `Ctrl+C` once loaded. This generates `Pal/Saved/Config/LinuxServer/`, 
 **Set the required values:**
 
     CONFIG="/home/your_username/pw_server/Pal/Saved/Config/LinuxServer/PalWorldSettings.ini"
-    sed -i 's/ServerName="[^"]*"/ServerName="Your Server Name"/' "$CONFIG"
-    sed -i 's/AdminPassword="[^"]*"/AdminPassword="your_admin_password"/' "$CONFIG"
+    sed_escape() { printf '%s' "$1" | sed -e 's/[\/&\\]/\\&/g'; }
+    SERVER_NAME_ESCAPED=$(sed_escape "Your Server Name")
+    ADMIN_PASSWORD_ESCAPED=$(sed_escape "your_admin_password")
+
+    sed -i "s/ServerName=\"[^\"]*\"/ServerName=\"$SERVER_NAME_ESCAPED\"/" "$CONFIG"
+    sed -i "s/AdminPassword=\"[^\"]*\"/AdminPassword=\"$ADMIN_PASSWORD_ESCAPED\"/" "$CONFIG"
     sed -i 's/RESTAPIEnabled=False/RESTAPIEnabled=True/' "$CONFIG"
 
 > [!Important]
@@ -259,6 +263,11 @@ Update `API_PASS` to match `AdminPassword`:
             print('API_AUTH_FAILED')
         else:
             print(f'API error on /{endpoint}: HTTP {e.code}')
+    except (urllib.error.URLError, ConnectionRefusedError, TimeoutError) as e:
+        # Covers RESTAPIEnabled=False or the API not running at all - not
+        # just a wrong password. Same fast-fail signal so the bash side
+        # doesn't have to distinguish the two.
+        print('API_AUTH_FAILED')
     except Exception as e:
         print(f'API error on /{endpoint}: {e}')
     "
@@ -272,7 +281,7 @@ Update `API_PASS` to match `AdminPassword`:
 
             FIRST_API_RESULT=$(send_api_cmd "announce" '{"message": "Server shutting down in 5 minutes! Please prepare."}')
             if echo "$FIRST_API_RESULT" | grep -q "API_AUTH_FAILED"; then
-                log "CRITICAL: REST API authentication failed. Going straight to signal-based termination."
+                log "CRITICAL: REST API unreachable or authentication failed (check RESTAPIEnabled/AdminPassword). Going straight to signal-based termination."
             else
                 sleep 120
                 send_api_cmd "announce" '{"message": "Server shutting down in 3 minutes! Find a safe spot."}'
