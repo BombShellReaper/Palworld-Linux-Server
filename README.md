@@ -813,6 +813,8 @@ Add:
 Add under `[Service]` in Step 10's unit:
 
     Environment="SCREENDIR=/home/your_username/.screen"
+    ExecStartPre=/bin/mkdir -p /home/your_username/.screen
+    ExecStartPre=/bin/chmod 700 /home/your_username/.screen
     NoNewPrivileges=true
     PrivateTmp=true
     ProtectSystem=strict
@@ -825,8 +827,8 @@ Add under `[Service]` in Step 10's unit:
     ReadWritePaths=/home/your_username/backups
     ReadWritePaths=/home/your_username/.local/share/Steam
 
-    mkdir -p /home/your_username/.screen
-    chmod 700 /home/your_username/.screen
+> [!Note]
+> `ExecStartPre=` runs inside the same sandbox as `ExecStart=`, so it can already write to `.screen` via the `ReadWritePaths` entry above - no separate manual `mkdir` step needed, and the directory gets recreated automatically if it's ever deleted.
 
 > [!Caution]
 > Every path the service writes to must be listed, or the write fails silently. `screen`'s socket directory is the most likely thing to break if the `SCREENDIR` override above is skipped - its default location isn't in this sandbox at all.
