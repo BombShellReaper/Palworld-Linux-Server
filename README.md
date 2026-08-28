@@ -1,11 +1,11 @@
 ![Build Status](https://img.shields.io/badge/Dedicated_Server-Linux-green)
-![ConanExiles](https://img.shields.io/badge/Conan_Exiles-8A2BE2)
+![Palworld](https://img.shields.io/badge/Palworld-8A2BE2)
 ![Steam](https://img.shields.io/badge/Steam-8A2BE2)
-# Conan Exiles Linux Server Setup Guide
+# Palworld Linux Server Setup Guide
 
 **Overview**
 
-This is a step-by-step guide on how to set up and run a Ubuntu Conan Exiles dedicated server, including a hardened backup/update/start pipeline, an RCON-based graceful stop, Steam Workshop mod syncing, an automated update checker, and a systemd unit that correctly tracks the real game process.
+This is a step-by-step guide on how to set up and run a Ubuntu Palworld server, including a hardened backup/update/start pipeline, a REST API-based graceful stop, an automated update checker, and a systemd unit that correctly tracks the real game process.
 
 **Prerequisites**
 
@@ -14,13 +14,11 @@ This is a step-by-step guide on how to set up and run a Ubuntu Conan Exiles dedi
 - A user with sudo privileges
 
 > [!Caution]
-> Directory structures may differ based on your specific setup. Paths below assume the server user is `conan` and the install directory is `/home/conan/conan_server` - adjust to match your own setup.
+> Directory structures may differ based on your specific setup. Paths below assume the server user is `steam` and the install directory is `/home/steam/pw_server` - adjust to match your own setup.
 
---------------------------------------------------------------------------------
 # Step 1: Update and Upgrade Your System
 
     sudo apt update && sudo apt full-upgrade -y && sudo apt autoremove -y
-
 --------------------------------------------------------------------------------
 # Step 2: Install Required Dependencies
 
@@ -34,6 +32,8 @@ This is a step-by-step guide on how to set up and run a Ubuntu Conan Exiles dedi
 
 **Install OpenSSH Server**
 
+This enables secure remote access to your server.
+
     sudo apt install openssh-server -y
 
 **Install Steamcmd**
@@ -43,106 +43,168 @@ This is a step-by-step guide on how to set up and run a Ubuntu Conan Exiles dedi
 **Install UFW (Uncomplicated Firewall)**
 
     sudo apt install ufw -y
-
 --------------------------------------------------------------------------------
 # Step 3: Configure UFW (Uncomplicated Firewall)
 
-Allow incoming connections to the game port (adjust 7777 if you use a custom port):
+Allow all incoming connections to the game port (adjust 8211 if you use a custom port):
 
-    sudo ufw allow from any proto udp to any port 7777 comment "Conan Exiles Server Port"
+    sudo ufw allow from any proto udp to any port 8211 comment "Palworld Server Port"
 
-Allow the query port (used for the server browser):
+> [!TIP]
+> For added security, change "any" to a specific IP address or range.
 
-    sudo ufw allow from any proto udp to any port 27015 comment "Conan Exiles Query Port"
+Allow all incoming connections to the query port:
+
+    sudo ufw allow from any proto udp to any port 27015 comment "Palworld Query Port"
+
+> [!TIP]
+> For added security, change "any" to a specific IP address or range.
 
 **Allow SSH Connections Through UFW** (Optional)
 
     sudo ufw allow from any to any port 22 comment "SSH"
 
+> [!TIP]
+> For added security, change "any" to a specific IP address or range.
+
 > [!Important]
-> Do **not** open the RCON port (default 25575) to the internet. The stop script and update checker in this guide only ever connect to RCON over `127.0.0.1` - there is no reason for it to be reachable from outside the box, and exposing it would let anyone who finds the port attempt to authenticate against your RCON password directly.
+> Do **not** open the REST API port (default 8212) to the internet. The stop script and update checker in this guide talk to the API over `127.0.0.1` only - there is no reason for it to ever be reachable from outside the box, and exposing it would let anyone who finds the port attempt to authenticate against your AdminPassword directly.
 
 Set the default rule to deny incoming traffic (Optional)
 
     sudo ufw default deny incoming
 
-**Enable UFW**
+**Enable UFW** (UFW will enable on reboot)
 
     sudo ufw enable
+
+Check the UFW status after enabling it:
+
     sudo ufw status
 
 --------------------------------------------------------------------------------
 # Step 4: Create a Non Sudo User
 
+Replace "*your_username*" with the desired username.
+
     sudo adduser your_username
+
+> [!NOTE]
+> This will prompt you through the setup
+
+**Reboot the system**
+
     sudo reboot
 
+-------------------------------------------------------------------------------
+# Step 5: Install Palworld Server
+
+**Log in to your server with the new user account through cmd, PowerShell, PuTTY, etc. Use your preferred terminal emulator.**
+
+**Install Palworld Server Files**
+
+    steamcmd +force_install_dir /home/your_username/pw_server +login anonymous +app_update 2394010 validate +quit
+
+**Navigate to the Server Directory**
+
+    cd pw_server
+
+**Start the server once, manually, to generate its config files**
+
+    ./PalServer.sh -useperfthreads -NoAsyncLoadingThread -UseMultithreadForDS
+
+Stop the server with Ctrl + C once you see it finish loading. This first run creates `PalWorldSettings.ini` and the default save data - you'll edit that file in the next step, then hand the server off to the automated scripts in Step 7 onward rather than starting it manually again.
+
 --------------------------------------------------------------------------------
-# Step 5: Install Conan Exiles Server
+# Step 6: Configure the Server
 
-Log in as your new user, then:
+**Edit PalWorldSettings.ini**
 
-    steamcmd +force_install_dir /home/your_username/conan_server +login anonymous +app_update 443030 validate +quit
+    nano /home/your_username/pw_server/Pal/Saved/Config/LinuxServer/PalWorldSettings.ini
 
---------------------------------------------------------------------------------
-# Step 6: Enable RCON and Verify It Works
+**Add the following to PalworldSettings.ini**
 
-Unlike some games, Conan Exiles doesn't have a settings file toggle for RCON - it's enabled directly via launch flags, which are already included in the start script in Step 7:
+    [/Script/Pal.PalGameWorldSettings]
+    OptionSettings=(Difficulty=None,RandomizerType=None,RandomizerSeed="",bIsRandomizerPalLevelRandom=False,DayTimeSpeedRate=1.000000,NightTimeSpeedRate=1.000000,ExpRate=1.000000,PalCaptureRate=1.000000,PalSpawnNumRate=1.000000,PalDamageRateAttack=1.000000,PalDamageRateDefense=1.000000,PlayerDamageRateAttack=1.000000,PlayerDamageRateDefense=1.000000,PlayerStomachDecreaceRate=1.000000,PlayerStaminaDecreaceRate=1.000000,PlayerAutoHPRegeneRate=1.000000,PlayerAutoHpRegeneRateInSleep=1.000000,PalStomachDecreaceRate=1.000000,PalStaminaDecreaceRate=1.000000,PalAutoHPRegeneRate=1.000000,PalAutoHpRegeneRateInSleep=1.000000,BuildObjectHpRate=1.000000,BuildObjectDamageRate=1.000000,BuildObjectDeteriorationDamageRate=1.000000,CollectionDropRate=1.000000,CollectionObjectHpRate=1.000000,CollectionObjectRespawnSpeedRate=1.000000,EnemyDropItemRate=1.000000,DeathPenalty=All,bEnablePlayerToPlayerDamage=False,bEnableFriendlyFire=False,bEnableInvaderEnemy=True,bActiveUNKO=False,bEnableAimAssistPad=True,bEnableAimAssistKeyboard=False,DropItemMaxNum=3000,DropItemMaxNum_UNKO=100,BaseCampMaxNum=128,BaseCampWorkerMaxNum=15,DropItemAliveMaxHours=1.000000,bAutoResetGuildNoOnlinePlayers=False,AutoResetGuildTimeNoOnlinePlayers=72.000000,GuildPlayerMaxNum=20,BaseCampMaxNumInGuild=4,PalEggDefaultHatchingTime=72.000000,WorkSpeedRate=1.000000,AutoSaveSpan=30.000000,bIsMultiplay=False,bIsPvP=False,bHardcore=False,bPalLost=False,bCharacterRecreateInHardcore=False,bCanPickupOtherGuildDeathPenaltyDrop=False,bEnableNonLoginPenalty=True,bEnableFastTravel=True,bEnableFastTravelOnlyBaseCamp=False,bIsStartLocationSelectByMap=True,bExistPlayerAfterLogout=False,bEnableDefenseOtherGuildPlayer=False,bInvisibleOtherGuildBaseCampAreaFX=False,bBuildAreaLimit=False,ItemWeightRate=1.000000,CoopPlayerMaxNum=4,ServerPlayerMaxNum=32,ServerName="Default Palworld Server",ServerDescription="",AdminPassword="",ServerPassword="",bAllowClientMod=True,PublicPort=8211,PublicIP="",RCONEnabled=False,RCONPort=25575,Region="",bUseAuth=True,BanListURL="https://b.palworldgame.com/api/banlist.txt",RESTAPIEnabled=False,RESTAPIPort=8212,bShowPlayerList=False,ChatPostLimitPerMinute=30,CrossplayPlatforms=(Steam,Xbox,PS5,Mac),bIsUseBackupSaveData=True,LogFormatType=Text,bIsShowJoinLeftMessage=True,SupplyDropSpan=180,EnablePredatorBossPal=True,MaxBuildingLimitNum=0,ServerReplicatePawnCullDistance=15000.000000,bAllowGlobalPalboxExport=True,bAllowGlobalPalboxImport=False,EquipmentDurabilityDamageRate=1.000000,ItemContainerForceMarkDirtyInterval=1.000000,ItemCorruptionMultiplier=1.000000,DenyTechnologyList=,GuildRejoinCooldownMinutes=0,BlockRespawnTime=5.000000,RespawnPenaltyDurationThreshold=0.000000,RespawnPenaltyTimeScale=2.000000,bDisplayPvPItemNumOnWorldMap_BaseCamp=False,bDisplayPvPItemNumOnWorldMap_Player=False,AdditionalDropItemWhenPlayerKillingInPvPMode="PlayerDropItem",AdditionalDropItemNumWhenPlayerKillingInPvPMode=1,bAdditionalDropItemWhenPlayerKillingInPvPMode=False,bAllowEnhanceStat_Health=True,bAllowEnhanceStat_Attack=True,bAllowEnhanceStat_Stamina=True,bAllowEnhanceStat_Weight=True,bAllowEnhanceStat_WorkSpeed=True)
 
-    -RconEnabled=1 -RconPassword="your_rcon_password" -RconPort=25575
+> [!TIP]
+> Edit the following settings as needed:
+
+ServerName=""
+
+ServerDescription="" (optional)
+
+AdminPassword="" (optional, but **required** if you want RESTAPIEnabled below to actually work - the API uses this as its Basic Auth password)
+
+ServerPassword="" (optional)
+
+PublicIP=""
 
 > [!Important]
-> **Conan Exiles' actual supported RCON commands are not fully or reliably documented anywhere official.** Third-party hosting guides list commands that may not exist on your build - two of them (`save`, `quit`) turned out not to exist at all when tested directly against a real running server in the course of building this guide, despite appearing in multiple "reference" scripts online. **Verify your own server's real command set before trusting any script that uses RCON**, including this one:
+> **Set these two explicitly if you plan to use the stop script / update checker in Step 8 and Step 9:**
+>
+>     RESTAPIEnabled=True
+>     RESTAPIPort=8212
+>
+> The graceful stop script in this guide talks to the server over this REST API (`announce`, `save`, `shutdown`). If it's left at the default `RESTAPIEnabled=False`, the stop script's API calls will fail silently and it will fall back to a hard `SIGINT`/`SIGKILL` on the process instead of a clean shutdown.
 
-Start the server once manually to confirm it boots (`./ConanSandboxServer.sh -log -RconEnabled=1 -RconPassword=your_rcon_password -RconPort=25575`), then from another terminal, ask the server itself what it actually supports:
+> [!Important]
+> The file should have two lines and if you use nano it should look something like this.
 
-```bash
-python3 -c "
-import socket, struct
-def run_cmd(ip, port, password, cmd):
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.settimeout(5)
-    s.connect((ip, int(port)))
-    s.sendall(struct.pack('<3i', 10 + len(password), 1, 3) + password.encode('utf-8') + b'\x00\x00')
-    s.recv(4096)
-    s.sendall(struct.pack('<3i', 10 + len(cmd), 2, 2) + cmd.encode('utf-8') + b'\x00\x00')
-    res = s.recv(8192)
-    s.close()
-    print(res)
-run_cmd('127.0.0.1', '25575', 'your_rcon_password', 'help')
-"
-```
+![image](https://github.com/user-attachments/assets/3efb9777-25d3-49ec-8846-e56372c564f0)
 
-This should return a byte string listing every command your build actually supports. On the build this guide was validated against, the real graceful-shutdown command turned out to be `shutdown` (not `quit`, and there is no separate `save` command - `shutdown` handles flushing world data as part of its own sequence). **Confirm what your own server returns before relying on the stop script in Step 8**, and adjust the commands it sends if your build's list differs.
+> [!TIP]
+> You can also find the PalWorldSettings.ini settings at the following location. Replace *your_username* with the actual username.
+
+    nano /home/your_username/Steam/steamapps/common/PalServer/DefaultPalWorldSettings.ini
+
+**Verify the API is actually reachable before moving on**
+
+Start the server once more, then from another terminal:
+
+    curl -s -u admin:YOUR_ADMIN_PASSWORD http://127.0.0.1:8212/v1/api/info
+
+You should get back a JSON blob with your server name and version. If you get a connection refused, double check `RESTAPIEnabled`/`RESTAPIPort` are set and that you've restarted the server since editing the file.
 
 --------------------------------------------------------------------------------
 # Step 7: Create the Start Script
 
+Return to the user's home directory
+
     cd
-    mkdir -p .scripts/Start_Server .scripts/Stop_Server .scripts/Update_Checker .logs/Start_Server .logs/Stop_Server .logs/Update_Checker
+
+Create a directory for your scripts:
+
+    mkdir .scripts
+
+Change to the new directory:
+
     cd .scripts
+
+Create the start script:
+
     nano start_server.sh
 
-Copy and edit the following - update `DIRPATH`, `ADMIN_PASSWORD`, `RCON_PASSWORD`, and `WORKSHOP_IDS` (your own Steam Workshop mod IDs, or remove Step 2.5 entirely if you don't run mods) to match your setup:
+Copy and edit the following script - update `INSTANCE_NAME`, `SERVER_PORT`, `DIRPATH`, `BACKUP_DIR`, and `LOG_DIR` to match your setup:
 
     #!/bin/bash
     set -o pipefail
 
     #set -x     # Uncomment to enable debug output.
 
-    INSTANCE_NAME="Conan"
-    SERVER_PORT="7777"
-    DIRPATH="/home/your_username/conan_server"
+    INSTANCE_NAME="Palworld"
+    SERVER_PORT="8211"
+    DIRPATH="/home/your_username/pw_server"
     STEAMUSERNAME="anonymous"
-    BACKUP_DIR="/home/your_username/.backups"
+    BACKUP_DIR="/home/your_username/backups"
     TIMESTAMP=$(date '+%Y-%m-%d_%H%M%S')
-    LOG_DIR="/home/your_username/.logs/Start_Server"
-    LOGFILE="$LOG_DIR/conanserver_$TIMESTAMP.log"
+    LOG_DIR="/home/your_username/logs"
+    LOGFILE="$LOG_DIR/palserver_$TIMESTAMP.log"
+
+    # PID tracking (for real process verification / systemd integration)
     PID_DIR="/home/your_username/.run"
-    PID_FILE="$PID_DIR/conanserver.pid"
-    GAME_PROCESS_NAME="ConanSandboxServer-Linux-Shipping"
-    ADMIN_PASSWORD="your_admin_password"
-    RCON_PASSWORD="your_rcon_password"
+    PID_FILE="$PID_DIR/palserver.pid"
+    GAME_PROCESS_NAME="PalServer-Linux-Shipping"
 
     mkdir -p "$LOG_DIR"
     mkdir -p "$BACKUP_DIR"
@@ -163,6 +225,8 @@ Copy and edit the following - update `DIRPATH`, `ADMIN_PASSWORD`, `RCON_PASSWORD
         exit 0
     fi
 
+    # Everything below is piped through `tee -a "$LOGFILE"`, so a plain echo
+    # here already reaches both the console and the log file.
     log() {
         echo "$(date '+%Y-%m-%d %H:%M:%S') - $1"
     }
@@ -179,94 +243,54 @@ Copy and edit the following - update `DIRPATH`, `ADMIN_PASSWORD`, `RCON_PASSWORD
         fi
 
         # --- STEP 1: BACKUP & LOG ROTATION ---
-        log "Initiating pre-update Conan Exiles backup (Saves)..."
-        if [ -d "$DIRPATH/ConanSandbox/Saved" ]; then
-            tar -czf "$BACKUP_DIR/conanserver_backup_$TIMESTAMP.tar.gz" \
-                -C "$DIRPATH/ConanSandbox" Saved/
+        log "Initiating pre-update Palworld backup (Saves and Configurations)..."
+        if [ -d "$DIRPATH/Pal/Saved/SaveGames" ] && [ -d "$DIRPATH/Pal/Saved/Config" ]; then
+            tar -czf "$BACKUP_DIR/palserver_backup_$TIMESTAMP.tar.gz" \
+                -C "$DIRPATH/Pal/Saved" SaveGames/ Config/
             if [ $? -eq 0 ]; then
-                log "Backup successfully created: conanserver_backup_$TIMESTAMP.tar.gz"
+                log "Backup successfully created: palserver_backup_$TIMESTAMP.tar.gz"
             else
                 log "Warning: Backup compression encountered errors."
             fi
         else
-            log "Warning: Mandatory Conan Exiles data directory not found. Skipping backup step."
+            log "Warning: Mandatory Palworld data directories not found. Skipping backup step."
         fi
 
-        find "$BACKUP_DIR" -name "conanserver_backup_*.tar.gz" -type f -mtime +30 -exec rm -f {} \;
-        log "Backup rotation check complete (30-day cutoff)."
-        find "$LOG_DIR" -name "conanserver_*.log" -type f -mtime +30 -exec rm -f {} \;
+        log "Enforcing 30-day backup retention rotation policy..."
+        find "$BACKUP_DIR" -name "palserver_backup_*.tar.gz" -type f -mtime +30 -exec rm -f {} \;
+        log "Backup rotation check complete."
+
+        log "Enforcing 30-day individual log retention rotation policy..."
+        find "$LOG_DIR" -name "palserver_*.log" -type f -mtime +30 -exec rm -f {} \;
         log "Log rotation check complete."
 
         # --- STEP 2: GAME ENGINE SOFTWARE UPDATE ---
-        log "Updating Conan Exiles Server..."
-        if /usr/games/steamcmd +force_install_dir "$DIRPATH" +login "$STEAMUSERNAME" +app_update 443030 validate +quit; then
+        log "Updating Palworld Server..."
+        if /usr/games/steamcmd +force_install_dir "$DIRPATH" +login "$STEAMUSERNAME" +app_update 2394010 validate +quit; then
             log "Update completed successfully."
         else
             log "Critical Error: SteamCMD core game update failed. Aborting lifecycle to prevent mismatched version errors."
             exit 1
         fi
 
-        # --- STEP 2.5: STEAM WORKSHOP MOD SYNC (remove this block if you run no mods) ---
-        log "Initiating Steam Workshop Mod sync sequence..."
-
-        WORKSHOP_IDS=(
-            # Add your own Workshop item IDs here, one per line
-        )
-
-        if [ ${#WORKSHOP_IDS[@]} -gt 0 ]; then
-            DOWNLOAD_CMD="/usr/games/steamcmd +force_install_dir /home/your_username/downloads +login anonymous"
-            for id in "${WORKSHOP_IDS[@]}"; do
-                DOWNLOAD_CMD+=" +workshop_download_item 440900 $id"
-            done
-            DOWNLOAD_CMD+=" +quit"
-
-            if eval "$DOWNLOAD_CMD"; then
-                log "Workshop mods pulled from Steam successfully. Transferring files..."
-                SRC="/home/your_username/downloads/steamapps/workshop/content/440900"
-                DEST="$DIRPATH/ConanSandbox/Mods"
-                mkdir -p "$DEST"
-
-                # Remove old .pak files from a previous run, but keep modlist.txt intact.
-                find "$DEST" -maxdepth 1 -type f -name "*.pak" -delete
-
-                # Copy each mod in, keeping its original numeric Workshop ID as the filename -
-                # this must match how they're listed (by numeric ID) in modlist.txt.
-                for id in "${WORKSHOP_IDS[@]}"; do
-                    if [ -d "$SRC/$id" ]; then
-                        cp "$SRC/$id"/*.pak "$DEST/$id.pak"
-                    else
-                        log "Warning: Workshop item $id was not found in the download cache; skipping."
-                    fi
-                done
-
-                log "All mod items successfully synced to active game directory."
-                rm -rf "$SRC"/*
-                log "Download cache cleared safely."
-            else
-                log "Warning: SteamCMD mod updates failed. Running server with current .pak items."
-            fi
-        else
-            log "No Workshop IDs configured - skipping mod sync."
-        fi
-
         # --- STEP 3: START APPLICATION WINDOW ---
-        log "Starting Conan Exiles server inside Screen session on port $SERVER_PORT..."
-        /usr/bin/screen -dmS "$INSTANCE_NAME" "$DIRPATH/ConanSandboxServer.sh" -log -MaxPlayers=40 -AdminPassword="$ADMIN_PASSWORD" -RconEnabled=1 -RconPassword="$RCON_PASSWORD" -RconPort=25575 -RconMaxKarma=60 -port="$SERVER_PORT" -queryport=27015 -multihome=0.0.0.0 -USEALLAVAILABLECORES -workers=4 -NoAsyncloadingStartup
+        log "Starting Palworld server inside Screen session on port $SERVER_PORT..."
+        /usr/bin/screen -dmS "$INSTANCE_NAME" "$DIRPATH/PalServer.sh" -port="$SERVER_PORT" -publicport="$SERVER_PORT" -useperfthreads -NoAsyncLoadingThread -UseMultithreadForDS -PublicLobby
 
-        sleep 60
+        sleep 5
 
         if /usr/bin/screen -list | grep -q "\.${INSTANCE_NAME}[[:space:]]"; then
             log "Screen session is alive. Verifying the actual game process next..."
         else
-            log "Critical Error: Failed to start Conan Exiles screen session."
+            log "Critical Error: Failed to start Palworld screen session."
             exit 1
         fi
 
         # --- STEP 3.5: CAPTURE THE ACTUAL GAME PROCESS PID ---
         # A live screen session doesn't guarantee the game itself came up (a
-        # broken mod can crash it on load while the wrapper session stays
-        # open). This confirms the real binary is running and records its
-        # PID for systemd to track.
+        # failed update or bad config can crash it on load while the wrapper
+        # session stays open). This confirms the real binary is running and
+        # records its PID for systemd to track.
         log "Waiting for $GAME_PROCESS_NAME to appear so we can confirm the server actually started..."
         PID_WAIT_MAX=60
         PID_WAIT_COUNT=0
@@ -282,41 +306,44 @@ Copy and edit the following - update `DIRPATH`, `ADMIN_PASSWORD`, `RCON_PASSWORD
 
         if [ -n "$GAME_PID" ]; then
             echo "$GAME_PID" > "$PID_FILE"
-            log "Conan Exiles server started successfully in background (PID $GAME_PID)."
+            log "Palworld server started successfully in background (PID $GAME_PID)."
         else
             log "Critical Error: Screen session is up, but $GAME_PROCESS_NAME never appeared after ${PID_WAIT_MAX}s."
-            log "This usually means the server crashed on load (often a broken/incompatible mod). Check the game log."
+            log "Check the game log for the actual failure cause."
             exit 1
         fi
     } 2>&1 | tee -a "$LOGFILE"
 
-Make it executable:
+Make the script executable:
 
     chmod u+x start_server.sh
 
 --------------------------------------------------------------------------------
 # Step 8: Create the Stop Script
 
+The server's REST API (enabled in Step 6) is the correct way to shut it down gracefully - it lets you warn players before the server actually goes down and triggers a proper world save, instead of just killing the process.
+
     nano stop_server.sh
 
-Copy and edit the following - update `RCON_PASS` and paths to match your setup, and confirm `shutdown` is actually the correct command per your own Step 6 test:
+Copy and edit the following - update `API_PASS` to match the `AdminPassword` you set in `PalWorldSettings.ini`, and update paths to match your setup:
 
     #!/bin/bash
     set -o pipefail
 
-    INSTANCE_NAME="Conan"
-    GAME_PROCESS_NAME="ConanSandboxServer-Linux-Shipping"
+    INSTANCE_NAME="Palworld"
+    GAME_PROCESS_NAME="PalServer-Linux-Shipping"
 
-    RCON_IP="127.0.0.1"
-    RCON_PORT="25575"
-    RCON_PASS="your_rcon_password"
+    API_IP="127.0.0.1"
+    API_PORT="8212"
+    API_USER="admin"
+    API_PASS="YOUR_ADMIN_PASSWORD"
 
     TIMESTAMP=$(date '+%Y-%m-%d_%H%M%S')
-    LOG_DIR="/home/your_username/.logs/Stop_Server"
-    LOGFILE="$LOG_DIR/conanserver_stop_$TIMESTAMP.log"
+    LOG_DIR="/home/your_username/logs"
+    LOGFILE="$LOG_DIR/palserver_stop_$TIMESTAMP.log"
 
     PID_DIR="/home/your_username/.run"
-    PID_FILE="$PID_DIR/conanserver.pid"
+    PID_FILE="$PID_DIR/palserver.pid"
 
     mkdir -p "$LOG_DIR"
 
@@ -324,68 +351,80 @@ Copy and edit the following - update `RCON_PASS` and paths to match your setup, 
         echo "$(date '+%Y-%m-%d %H:%M:%S') - $1"
     }
 
-    send_rcon() {
-        local command_text="$1"
+    # Native Python REST API sender. Uses a heredoc for the JSON body so
+    # messages containing an apostrophe don't break the embedded Python
+    # string literal.
+    send_api_cmd() {
+        local endpoint="$1"
+        local json_body="$2"
         python3 -c "
-    import socket, struct
-    def run_cmd(ip, port, password, cmd):
-        try:
-            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            s.settimeout(5)
-            s.connect((ip, int(port)))
-            s.sendall(struct.pack('<3i', 10 + len(password), 1, 3) + password.encode('utf-8') + b'\x00\x00')
-            auth_resp = s.recv(4096)
-            # Source RCON protocol: the auth response's Request ID field
-            # (bytes 4:8) is -1 on failed authentication. Without this
-            # check, a wrong password never raises an exception - it just
-            # silently proceeds to send the command over an unauthenticated
-            # connection, and every command from then on is a no-op.
-            auth_id = struct.unpack('<i', auth_resp[4:8])[0]
-            if auth_id == -1:
-                print('RCON_AUTH_FAILED')
-                s.close()
-                return
-            s.sendall(struct.pack('<3i', 10 + len(cmd), 2, 2) + cmd.encode('utf-8') + b'\x00\x00')
-            res = s.recv(4096)
-            s.close()
-            return res
-        except Exception as e:
-            print(f'RCON Error: {e}')
-    run_cmd('$RCON_IP', '$RCON_PORT', '$RCON_PASS', '$command_text')
+    import urllib.request
+    import urllib.error
+    import base64
+
+    ip = '$API_IP'
+    port = '$API_PORT'
+    user = '$API_USER'
+    password = '$API_PASS'
+    endpoint = '$endpoint'
+    body_str = \"\"\"$json_body\"\"\"
+
+    url = f'http://{ip}:{port}/v1/api/{endpoint}'
+    req = urllib.request.Request(url, method='POST')
+    req.add_header('Content-Type', 'application/json')
+
+    auth_str = f'{user}:{password}'
+    auth_encoded = base64.b64encode(auth_str.encode('utf-8')).decode('utf-8')
+    req.add_header('Authorization', f'Basic {auth_encoded}')
+
+    try:
+        data = body_str.encode('utf-8') if body_str else None
+        with urllib.request.urlopen(req, data=data, timeout=5) as response:
+            print(response.read().decode('utf-8'))
+    except urllib.error.HTTPError as e:
+        if e.code in (401, 403):
+            print('API_AUTH_FAILED')
+        else:
+            print(f'API error on /{endpoint}: HTTP {e.code}')
+    except Exception as e:
+        print(f'API error on /{endpoint}: {e}')
     "
     }
 
     {
-        find "$LOG_DIR" -name "conanserver_stop_*.log" -type f -mtime +30 -exec rm -f {} \;
+        find "$LOG_DIR" -name "palserver_stop_*.log" -type f -mtime +30 -exec rm -f {} \;
         log "Stop log rotation check complete."
 
         if /usr/bin/screen -list | grep -q "\.${INSTANCE_NAME}[[:space:]]"; then
             log "Active ${INSTANCE_NAME} session discovered. Initializing graceful countdown..."
 
             # Verify auth actually succeeds before committing to the full
-            # 5-minute countdown - if RCON_PASS is wrong, every subsequent
-            # call would silently no-op anyway, so there's no point waiting.
-            FIRST_RCON_RESULT=$(send_rcon "broadcast Server shutting down in 5 minutes! Please prepare.")
-            if echo "$FIRST_RCON_RESULT" | grep -q "RCON_AUTH_FAILED"; then
-                log "CRITICAL: RCON authentication failed (check RCON_PASS). Skipping RCON entirely and going straight to signal-based termination."
+            # countdown - if API_PASS is wrong, every subsequent call would
+            # silently fail anyway, so there's no point waiting.
+            FIRST_API_RESULT=$(send_api_cmd "announce" '{"message": "Server shutting down in 5 minutes! Please prepare."}')
+            if echo "$FIRST_API_RESULT" | grep -q "API_AUTH_FAILED"; then
+                log "CRITICAL: REST API authentication failed (check API_PASS matches AdminPassword). Skipping the API entirely and going straight to signal-based termination."
             else
                 sleep 120
-                send_rcon "broadcast Server shutting down in 3 minutes! Find a safe spot."
+                send_api_cmd "announce" '{"message": "Server shutting down in 3 minutes! Find a safe spot."}'
                 sleep 120
-                send_rcon "broadcast Server shutting down in 60 seconds! Please log out."
+                send_api_cmd "announce" '{"message": "Server shutting down in 60 seconds! Please log out."}'
                 sleep 30
-                send_rcon "broadcast Server shutting down in 30 seconds!"
+                send_api_cmd "announce" '{"message": "Server shutting down in 30 seconds!"}'
                 sleep 20
+                send_api_cmd "announce" '{"message": "Saving world state..."}'
 
-                log "Sending RCON shutdown command..."
-                send_rcon "shutdown"
+                log "Triggering world save via API..."
+                send_api_cmd "save" ""
+                sleep 10
+
+                log "Sending shutdown signal to Palworld core engine..."
+                send_api_cmd "shutdown" '{"waittime": 1, "message": "Server_is_stopping_for_maintenance"}'
             fi
 
             # --- VERIFY THE ACTUAL PROCESS EXITS ---
-            # RCON accepting the command doesn't guarantee the process
-            # actually terminates - poll for it directly, and don't assume
-            # it happens instantly. On the build this guide was tested
-            # against, "shutdown" genuinely works but is not immediate.
+            # The API accepting the shutdown call doesn't guarantee the
+            # process actually terminates - poll for it directly.
             SHUTDOWN_WAIT_MAX=45
             SHUTDOWN_WAIT_COUNT=0
             while pgrep -f "$GAME_PROCESS_NAME" > /dev/null && [ $SHUTDOWN_WAIT_COUNT -lt $SHUTDOWN_WAIT_MAX ]; do
@@ -395,7 +434,7 @@ Copy and edit the following - update `RCON_PASS` and paths to match your setup, 
 
             SERVER_PID=$(pgrep -f "$GAME_PROCESS_NAME")
             if [ -n "$SERVER_PID" ]; then
-                log "Process still alive after RCON shutdown attempt (${SHUTDOWN_WAIT_COUNT}s). Sending SIGINT to PID $SERVER_PID..."
+                log "Process still alive after API shutdown attempt (${SHUTDOWN_WAIT_COUNT}s). Sending SIGINT to PID $SERVER_PID..."
                 kill -SIGINT "$SERVER_PID"
                 sleep 15
                 if kill -0 "$SERVER_PID" 2>/dev/null; then
@@ -405,7 +444,7 @@ Copy and edit the following - update `RCON_PASS` and paths to match your setup, 
                     log "Process exited cleanly after SIGINT fallback."
                 fi
             else
-                log "Process exited cleanly after RCON shutdown (${SHUTDOWN_WAIT_COUNT}s)."
+                log "Process exited cleanly after API shutdown (${SHUTDOWN_WAIT_COUNT}s)."
             fi
 
             if /usr/bin/screen -list | grep -q "\.${INSTANCE_NAME}[[:space:]]"; then
@@ -418,7 +457,7 @@ Copy and edit the following - update `RCON_PASS` and paths to match your setup, 
                 log "Removed stale PID file."
             fi
 
-            log "Conan Exiles engine instance safely terminated."
+            log "Palworld engine instance safely terminated."
         else
             log "No active server screen found. Lifecycle step skipped."
         fi
@@ -428,28 +467,33 @@ Make it executable:
 
     chmod u+x stop_server.sh
 
+> [!TIP]
+> Confirm the countdown timing actually fits your comfort level before relying on it - the full sequence above (5 min → 3 min → 60s → 30s → save → shutdown) takes about 5 minutes from the first warning to the shutdown command being sent.
+
 --------------------------------------------------------------------------------
 # Step 9: Create an Automated Update Checker (Optional)
 
+This periodically checks Steam for a new server version, and if one is found, gracefully stops the server (Step 8), lets systemd (Step 10) bring it back up with the new version, and falls back to starting it manually if systemd doesn't.
+
     nano update_checker.sh
 
-Copy and edit the following, updating paths and `WEBHOOK_URL` (optional) to match your setup:
+Copy and edit the following, updating paths and `WEBHOOK_URL` (optional, for Discord alerts) to match your setup:
 
     #!/bin/bash
 
     set -o pipefail
 
-    GAME_NAME="Conan Exiles"
-    STEAM_APP_ID="443030"
-    SERVER_DIR="/home/your_username/conan_server"
+    GAME_NAME="Palworld"
+    STEAM_APP_ID="2394010"
+    SERVER_DIR="/home/your_username/pw_server"
     STEAMCMD="/usr/games/steamcmd"
     STOP_SCRIPT="/home/your_username/.scripts/stop_server.sh"
     START_SCRIPT="/home/your_username/.scripts/start_server.sh"
-    SCREEN_NAME="Conan"
+    SCREEN_NAME="Palworld"
     RESTART_POLL_MAX_WAIT=180
     TIMESTAMP=$(date '+%Y-%m-%d_%H%M%S')
-    LOG_DIR="/home/your_username/.logs/Update_Checker"
-    LOG_FILE="conanserver_update_$TIMESTAMP.log"
+    LOG_DIR="/home/your_username/logs"
+    LOG_FILE="palserver_update_$TIMESTAMP.log"
     WEBHOOK_URL=""
     IMAGE_URL=""
     DISCORD_FOOTER="Server Maintenance Automation"
@@ -511,9 +555,10 @@ Copy and edit the following, updating paths and `WEBHOOK_URL` (optional) to matc
 
     {
         # Adjust the mtime value below if this doesn't run every 30 minutes.
-        find "$LOG_DIR" -name "conanserver_update_*.log" -type f -mtime +3 -exec rm -f {} \;
+        find "$LOG_DIR" -name "palserver_update_*.log" -type f -mtime +3 -exec rm -f {} \;
         log "$(date '+%Y-%m-%d %H:%M:%S') - Update-checker log rotation check complete."
 
+        # Read the true installed version from disk (not just a tracking file)
         if [ -f "$MANIFEST_FILE" ]; then
             REAL_INSTALLED_VERSION=$(grep '"buildid"' "$MANIFEST_FILE" | awk -F '"' '{print $4}' | tr -d '[:space:]')
         else
@@ -575,28 +620,28 @@ Copy and edit the following, updating paths and `WEBHOOK_URL` (optional) to matc
         fi
     } 2>&1 | tee -a "$FULL_LOG_PATH"
 
-Make it executable, then schedule it (every 30 minutes below):
+Make it executable, then add it to your crontab to run on a schedule (every 30 minutes below):
 
     chmod u+x update_checker.sh
     crontab -e
 
-Add:
+Add this line:
 
     */30 * * * * flock -n /home/your_username/.flock/update_checker.lock /home/your_username/.scripts/update_checker.sh
 
 --------------------------------------------------------------------------------
 # Step 10: Create a Systemd Service
 
-    sudo nano /etc/systemd/system/ConanExiles.service
+    sudo nano /etc/systemd/system/PalWorld.service
 
 **Add the following configuration** - replace `your_username` throughout:
 
     [Unit]
-    Description=Your Conan Exiles Dedicated Server
+    Description=Your Palworld Server Instance
     After=network.target network-online.target
     Wants=network-online.target
-    StartLimitIntervalSec=600
-    StartLimitBurst=2
+    StartLimitIntervalSec=1200
+    StartLimitBurst=3
 
     [Service]
     Type=forking
@@ -604,47 +649,58 @@ Add:
     WorkingDirectory=/home/your_username
     ExecStart=/home/your_username/.scripts/start_server.sh
     ExecStop=/home/your_username/.scripts/stop_server.sh
-    PIDFile=/home/your_username/.run/conanserver.pid
+    PIDFile=/home/your_username/.run/palserver.pid
     KillMode=control-group
     SendSIGKILL=no
-    TimeoutStartSec=300
+    TimeoutStartSec=600
     TimeoutStopSec=420
+    RemainAfterExit=no
     Restart=always
     RestartSec=60
+    StandardOutput=null
+    StandardError=null
 
     [Install]
     WantedBy=multi-user.target
 
 > [!Important]
-> **`Restart=always`, not `Restart=on-failure`, matters more here than it might look.** This was found via a real, reproduced incident: `on-failure` does **not** treat a clean `SIGINT`-terminated exit as a failure - which is exactly how this stop script's SIGINT fallback (used whenever `shutdown` doesn't finish inside its wait window) terminates the process. Under `on-failure`, a completely normal graceful stop can silently fail to trigger systemd's own auto-restart, with only the update checker's own manual-start fallback catching it - producing a "Maintenance Failed" alert for something that wasn't actually a failure. `Restart=always` removes this dependency on *which signal* killed the process entirely.
+> A few things in this unit differ from what you may see in other guides, each for a specific reason:
 >
-> **`RestartSec=60`, `TimeoutStartSec=300`, `TimeoutStopSec=420`** were sized from real measured runtimes on a production server (not estimated): a typical start (backup + update + mod sync + launch + PID verify) completed in ~100-120 seconds, and a full graceful stop (5-minute countdown + shutdown + fallback) completed in ~300-330 seconds. These numbers give real margin above both without being wastefully large - tighten or loosen them based on your own measured logs once you've run a few real cycles.
->
-> **`StartLimitIntervalSec=600` / `StartLimitBurst=2`** caps systemd to 2 restart attempts in any 10-minute window before giving up and marking the unit `failed`, rather than retrying forever if something is genuinely broken. A single update cycle only ever counts as one restart, so this shouldn't fire during normal operation.
+> - **`Type=forking` + `PIDFile=`** (not `Type=simple`): the script launches the real game inside a detached `screen` session and exits itself, so systemd needs to track the actual game PID written to `PIDFile`, not the script's own process.
+> - **`ExecStop=` points at `stop_server.sh`**: this is what makes `systemctl stop`/`systemctl restart` trigger the graceful REST API shutdown from Step 8, instead of systemd just sending a raw kill signal to the process group.
+> - **`Restart=always`, not `Restart=on-failure`**: `on-failure` does *not* count a clean `SIGINT`-terminated exit as a failure, which is exactly how the stop script's fallback (and Ctrl+C in general) terminates the process. Under `on-failure`, a perfectly normal graceful stop will never trigger systemd's own auto-restart - only `always` restarts regardless of how the process exited.
+> - **`RestartSec=60`, `TimeoutStartSec=600`**: sized to give `start_server.sh`'s full backup+update+launch+PID-verify sequence real room to complete before systemd gives up. Treat these as a starting point - once you've watched a real run's timing in your own logs, tighten them to match.
+> - **`StartLimitIntervalSec=1200` / `StartLimitBurst=3`**: caps systemd to 3 restart attempts in any 20-minute window before it gives up and marks the unit `failed`, instead of retrying forever. The window has to comfortably exceed `TimeoutStartSec` - a single start attempt can legitimately take up to 600s, so a 60-second window (an earlier mismatch in this guide) would almost never see two failed attempts land inside it, making the safety net effectively inert. This is a safety net, not something you should expect to hit during normal operation - a single update cycle only ever counts as one restart.
 
 **Enable and Start the Service**
 
     sudo systemctl daemon-reload
-    sudo systemctl enable ConanExiles.service
-    sudo systemctl start ConanExiles.service
-    sudo systemctl status ConanExiles.service
-    cat /home/your_username/.run/conanserver.pid
+    sudo systemctl enable PalWorld.service
+    sudo systemctl start PalWorld.service
+
+**Confirm it actually started cleanly**
+
+    sudo systemctl status PalWorld.service
+    cat /home/your_username/.run/palserver.pid
 
 --------------------------------------------------------------------------------
 # Step 11: Create the Host-Level Maintenance Script (Optional)
 
-Steps 7-10 handle the *game* lifecycle. This step handles the *host*: applying OS security patches and rebooting on a schedule, while cleanly stopping and restarting the game around it. This needs **root**, so log in as your sudo user for this step.
+Steps 7-10 handle the *game* lifecycle - keeping Palworld itself updated. This step handles the *host*: applying OS security patches and rebooting on a schedule, while cleanly stopping and restarting the game around it.
 
-    sudo nano /usr/local/sbin/conan_maintenance.sh
+This script needs **root**, since it runs `apt-get` and `reboot` - it does not go in your game user's `.scripts` directory or crontab. Log in as your sudo user for this step.
 
-Copy and edit the following - update `SERVICE_NAME` and `WEBHOOK_URL` (optional) to match your setup:
+    sudo nano /usr/local/sbin/palworld_maintenance.sh
+
+Copy and edit the following - update `SERVICE_NAME` and `WEBHOOK_URL` (optional, for Discord alerts) to match your setup:
 
     #!/bin/bash
 
     PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
-    LOGFILE="/var/log/conan_system_maintenance.log"
-    SERVICE_NAME="ConanExiles.service"
+    # --- Configuration ---
+    LOGFILE="/var/log/palworld_system_maintenance.log"
+    SERVICE_NAME="PalWorld.service"
     WEBHOOK_URL=""
     IMAGE_URL=""
 
@@ -691,16 +747,18 @@ Copy and edit the following - update `SERVICE_NAME` and `WEBHOOK_URL` (optional)
         fi
     }
 
+    # Redirect standard output and error to both console and this run's logfile
     exec > >(tee -a "$LOGFILE") 2>&1
 
     echo "=============================================================================="
-    echo "$(date +'%Y-%m-%d %H:%M:%S') --- Starting Conan Exiles Maintenance Sequence ---"
+    echo "$(date +'%Y-%m-%d %H:%M:%S') --- Starting Palworld Maintenance Sequence ---"
 
-    # The systemd unit's ExecStop= points at stop_server.sh, which handles the
-    # RCON countdown/shutdown and the SIGINT/SIGKILL fallback. Calling
-    # systemctl stop here means that logic lives in exactly one place instead
-    # of being duplicated across scripts.
-    send_discord_message "Maintenance Started: Stopping the Conan Exiles server via systemd..."
+    # --- 1. GRACEFULLY STOP THE PALWORLD SERVER (VIA SYSTEMD, WHICH RUNS stop_server.sh) ---
+    # The systemd unit's ExecStop= (Step 10) points at stop_server.sh, which
+    # handles the countdown, the REST API save/shutdown, and the SIGINT/
+    # SIGKILL fallback. Calling systemctl stop here means that logic lives in
+    # exactly one place instead of being duplicated across scripts.
+    send_discord_message "Maintenance Started: Stopping the Palworld server via systemd..."
     echo "$(date +'%Y-%m-%d %H:%M:%S') Stopping $SERVICE_NAME (delegates to stop_server.sh for graceful shutdown)..."
     if systemctl stop "$SERVICE_NAME"; then
         echo "$(date +'%Y-%m-%d %H:%M:%S') $SERVICE_NAME stopped successfully."
@@ -708,6 +766,7 @@ Copy and edit the following - update `SERVICE_NAME` and `WEBHOOK_URL` (optional)
         echo "$(date +'%Y-%m-%d %H:%M:%S') WARNING: systemctl stop reported a non-zero exit for $SERVICE_NAME. Continuing anyway — check 'systemctl status $SERVICE_NAME' and stop_server.sh's own log if this is unexpected."
     fi
 
+    # --- 2. CHECK AND APPLY SYSTEM UPDATES ---
     echo "$(date +'%Y-%m-%d %H:%M:%S') Checking for OS updates..."
     apt-get update > /dev/null
 
@@ -722,7 +781,8 @@ Copy and edit the following - update `SERVICE_NAME` and `WEBHOOK_URL` (optional)
         echo "$(date +'%Y-%m-%d %H:%M:%S') No OS updates found."
     fi
 
-    send_discord_message "Maintenance Complete: Rebooting server host. Conan Exiles will auto-update and start on launch."
+    # --- 3. REBOOT THE MACHINE ---
+    send_discord_message "Maintenance Complete: Rebooting server host. Palworld will auto-update and start on launch."
     echo "$(date +'%Y-%m-%d %H:%M:%S') Maintenance finished. Flushing storage buffers and executing system reboot."
     echo "=============================================================================="
 
@@ -732,18 +792,21 @@ Copy and edit the following - update `SERVICE_NAME` and `WEBHOOK_URL` (optional)
 
 Make it executable:
 
-    sudo chmod +x /usr/local/sbin/conan_maintenance.sh
+    sudo chmod +x /usr/local/sbin/palworld_maintenance.sh
 
 > [!Note]
-> `apt-get upgrade -s | grep "^Inst"` (a dry-run simulation) is used deliberately instead of `apt-get list --upgradable` - `apt-get` has no `list` subcommand at all, and that combination silently fails and always reports "no updates," even when real updates are pending. This exact bug was caught by comparing the script's output against a manual `apt update` on a live server and finding a mismatch - worth doing that same sanity check yourself after your first run.
+> `apt-get upgrade -s | grep "^Inst"` (a dry-run simulation, checking for lines it would install) is used here deliberately instead of `apt list --upgradable`. `apt-get` has no `list` subcommand at all - that combination silently fails and always reports "no updates," even when real updates are pending. This was caught by comparing the script's output against a manual `apt update` on a live server and finding a mismatch - worth doing that same sanity check yourself after your first run.
 
 **Schedule it via root's crontab** (not your game user's):
 
     sudo crontab -e
 
-Add (5 AM daily shown):
+Add a line for whatever time you want maintenance to run (5 AM daily shown below):
 
-    0 5 * * * flock -n /tmp/conan_maintenance.lock /usr/local/sbin/conan_maintenance.sh
+    0 5 * * * flock -n /tmp/palworld_maintenance.lock /usr/local/sbin/palworld_maintenance.sh
+
+> [!TIP]
+> `flock` here prevents two overlapping runs if a previous maintenance cycle is still finishing (e.g. a slow reboot) when the next scheduled run would otherwise fire.
 
 --------------------------------------------------------------------------------
 # Step 12: Hardening (Optional)
@@ -752,32 +815,63 @@ Login with the sudo user and edit the sshd_config file
 
     sudo nano /etc/ssh/sshd_config
 
-Locate and edit:
+Locate the following lines and uncomment them, making the specified edits:
+
+ **#LoginGraceTime 2m**
 
     LoginGraceTime 1m
+
+ **#PermitRootLogin prohibit-password**
+
     PermitRootLogin no
+
+ **#MaxSessions 10**
+
     MaxSessions 4
 
-Reload and restart
+Reload systemctl & restart sshd.service
 
     sudo systemctl daemon-reload
     sudo systemctl restart ssh.service
 
-**Change Who Can Use the Switch User (su) Command**
+**Example:**
 
-    sudo groupadd restrictedsu
+![image](https://github.com/user-attachments/assets/f12f25af-807d-4981-9e53-ebe2ab3d2688)
+
+These are some steps you can take to enhance the security of your SSH service.
+
+# Change Who Can Use the Switch User (su) Command
+
+Make a new group for the su command. Replace "*group_name*" with your desired name for the new group.
+
+    sudo groupadd group_name
+
+> **Example:** *sudo groupadd restrictedsu*
+
+**Edit who can use the *su* command**
+
+Edit the *su* config
+
     sudo nano /etc/pam.d/su
 
-Add the line:
+Edit the following line to restrict su. Replace "*group_name*" with the one you made earlier.
 
-    auth       required   pam_wheel.so group=restrictedsu
+    auth       required   pam_wheel.so group=group_name
+
+> **Example:** *auth       required   pam_wheel.so group=restrictedsu*
+
+**Example:**
+
+![image](https://github.com/user-attachments/assets/3d3c941b-aadd-4bdb-b736-e2fb4c7b5c8b)
 
 > [!TIP]
 > If you want to trigger `start_server.sh`/`stop_server.sh` remotely (e.g. from a control panel or automation tool) without giving that system a general-purpose shell, consider a forced-command SSH key restricted to exactly one script (`command="/home/your_username/.scripts/start_server.sh",restrict ssh-ed25519 ...` in `authorized_keys`) instead of a normal login key. This limits what a leaked key could ever be used for, even in the worst case.
 
 ## Lock Down the Operational Scripts
 
-By default, `start_server.sh`, `stop_server.sh`, and `update_checker.sh` are owned by the same user the game process itself runs as. If the running Conan binary or a malicious mod is ever compromised, that account's write access means an attacker could overwrite these scripts - the next time systemd or cron triggers them, your own automation would run the attacker's payload.
+By default, `start_server.sh`, `stop_server.sh`, and `update_checker.sh` are owned by the same user (`your_username`) that the game process itself runs as. If the running Palworld binary is ever compromised, that account's write access means an attacker could overwrite these scripts with malicious code - the next time systemd or cron triggers them, your own automation would execute the attacker's payload instead.
+
+Root-owning the scripts (while leaving them executable by the game user) closes this off, and costs nothing in ongoing maintenance since it's a one-time change:
 
     sudo chown root:your_username /home/your_username/.scripts
     sudo chmod 750 /home/your_username/.scripts
@@ -785,27 +879,31 @@ By default, `start_server.sh`, `stop_server.sh`, and `update_checker.sh` are own
     sudo chmod 750 /home/your_username/.scripts/*.sh
 
 > [!Important]
-> Lock down both the **directory** and the **files**. Locking only the files isn't enough - if the directory itself is still writable, an attacker can delete and recreate a script even without write access to its contents.
+> Both the **directory** and the **files** need this treatment. Locking down only the files isn't enough - if the directory itself is still writable by `your_username`, an attacker can simply delete and recreate a script even though they can't write to the original file's contents.
+
+> [!Note]
+> After this change, you (or any tooling you use) will need `sudo` to edit these scripts going forward - `nano start_server.sh` as the game user will fail with a permissions error. That's the intended effect.
 
 > [!Caution]
-> **This protects against tampering, not against credential exposure.** `750` still gives `your_username` group read access - the same account can `cat stop_server.sh` and read `RCON_PASS` in plaintext, since the game process itself needs that same credential to authenticate over RCON. This is somewhat structurally unavoidable in this design: the account running the game inherently must be able to read what it authenticates with. If a compromised game process reading its own RCON password (rather than modifying scripts) is a threat you specifically care about, that needs a different privilege model entirely - e.g. a helper process with access `your_username` lacks - which is real added complexity most homelab setups don't need. This step solves one problem, not both.
+> **This protects against tampering, not against credential exposure.** `750` still gives `your_username` group read access - the same account can `cat stop_server.sh` and read `API_PASS` in plaintext, since the game process itself needs that same credential to authenticate. This is somewhat structurally unavoidable in this design: the account running the game inherently must be able to read what it authenticates with. If a compromised game process reading its own API password (rather than modifying scripts) is a threat you specifically care about, that needs a different privilege model entirely - e.g. a helper process with access `your_username` lacks - which is real added complexity most homelab setups don't need. This step solves one problem, not both.
 
 ## Sandbox the systemd Service
 
-Add the following under `[Service]` in `/etc/systemd/system/ConanExiles.service` (Step 10):
+Beyond who owns what, systemd itself can restrict what the running process is *allowed to touch at the kernel level*, regardless of file ownership - blocking it from reading unrelated system files, writing outside a declared set of paths, or gaining new privileges, even if the binary itself is compromised.
+
+Add the following under `[Service]` in `/etc/systemd/system/PalWorld.service` (Step 10), alongside your existing directives:
 
     Environment="SCREENDIR=/home/your_username/.screen"
     NoNewPrivileges=true
     PrivateTmp=true
     ProtectSystem=strict
     ProtectHome=read-only
-    ReadWritePaths=/home/your_username/conan_server
+    ReadWritePaths=/home/your_username/pw_server
     ReadWritePaths=/home/your_username/.run
     ReadWritePaths=/home/your_username/.flock
     ReadWritePaths=/home/your_username/.screen
-    ReadWritePaths=/home/your_username/.logs
-    ReadWritePaths=/home/your_username/.backups
-    ReadWritePaths=/home/your_username/downloads
+    ReadWritePaths=/home/your_username/logs
+    ReadWritePaths=/home/your_username/backups
     ReadWritePaths=/home/your_username/.local/share/Steam
 
 Create the directory and make sure any manual/interactive `screen` sessions use the same location, or `screen -list` won't see sessions started under the unit and vice versa:
@@ -815,21 +913,31 @@ Create the directory and make sure any manual/interactive `screen` sessions use 
     export SCREENDIR=/home/your_username/.screen   # add this to your shell profile too
 
 > [!Caution]
-> `ProtectSystem=strict` and `ProtectHome=read-only` make essentially the entire filesystem read-only to this service by default - every path it needs to write to must be listed explicitly, or the write fails silently and something breaks (most likely the SteamCMD update, the Workshop mod download/sync step, or the backup/log/PID-file writes). `/home/your_username/downloads` above is where Workshop mods are staged before being copied into `Mods/` - easy to forget since it's only used mid-script. **`screen`'s own socket directory is the single most likely thing to break on first deploy** if left unaddressed: its default location (often `/run/screen`, distro-dependent) isn't included in this sandbox at all, and `screen -dmS` failing to create its socket fails silently. Pinning `SCREENDIR` explicitly, as done above, removes the guesswork. If you installed SteamCMD differently, confirm its actual cache path too.
+> `ProtectSystem=strict` and `ProtectHome=read-only` make essentially the entire filesystem read-only to this service by default - every path it needs to write to must be listed explicitly via `ReadWritePaths=`, or the write will fail silently and something will break. The `.local/share/Steam` path above is SteamCMD's own cache/state directory and is easy to miss - if you installed SteamCMD differently, confirm its actual data path first. **`screen`'s own socket directory is the single most likely thing to break on first deploy** if left unaddressed: its default location (often `/run/screen`, distro-dependent) isn't included in this sandbox at all, and `screen -dmS` failing to create its socket fails silently, exactly the kind of failure this guide keeps warning about elsewhere. Pinning `SCREENDIR` explicitly, as done above, removes the guesswork.
 
-**Test before trusting this in production** - reload, restart, and watch a full update-and-mod-sync cycle complete successfully before considering this done:
+**Test before trusting this in production.** Reload and restart, then watch a full cycle closely:
 
     sudo systemctl daemon-reload
-    sudo systemctl restart ConanExiles.service
-    sudo journalctl -u ConanExiles.service -f
-    sudo systemd-analyze security ConanExiles.service
+    sudo systemctl restart PalWorld.service
+    sudo systemctl status PalWorld.service
+    tail -f /home/your_username/logs/palserver_*.log
 
---------------------------------------------------------------------------------
+> [!Note]
+> This unit sets `StandardOutput=null`/`StandardError=null` (Step 10), since `start_server.sh`/`stop_server.sh` already log everything themselves via `tee`. That means `journalctl -u PalWorld.service` will show essentially nothing regardless of what's actually happening - tail the log file directly instead, not the journal.
+
+Trigger `update_checker.sh` manually (or wait for its next scheduled run) and confirm the backup, SteamCMD update, and relaunch all still complete successfully - this is exactly the kind of change that fails quietly as "the server won't restart after the next update," discovered by players rather than by you, if a needed path was missed.
+
+You can also ask systemd itself to grade the unit's exposure before and after:
+
+    sudo systemd-analyze security PalWorld.service
 
 **Conclusion**
 
-You have successfully set up a hardened Conan Exiles server with automated backups, Workshop mod syncing, graceful RCON-based updates, and a systemd service that correctly tracks the real game process.
+You have successfully set up a hardened Palworld server with automated backups, graceful updates, and a systemd service that correctly tracks the real game process. For further customization, refer to the game's official documentation.
 
 **References**
 - https://developer.valvesoftware.com/wiki/SteamCMD#Linux
+- https://tech.palworldgame.com/getting-started/deploy-dedicated-server/
+- https://tech.palworldgame.com/settings-and-operation/rest-api/
 - https://www.digitalocean.com/community/tutorials/ufw-essentials-common-firewall-rules-and-commands
+- https://tech.palworldgame.com/settings-and-operation/configuration/
