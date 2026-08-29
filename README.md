@@ -168,6 +168,8 @@ Update `INSTANCE_NAME`, `SERVER_PORT`, `DIRPATH`, `BACKUP_DIR`, and `LOG_DIR` to
     PID_FILE="$PID_DIR/palserver.pid"
     GAME_PROCESS_NAME="PalServer-Linux-Shipping"
 
+    export SCREENDIR="/home/your_username/.screen"
+
     mkdir -p "$LOG_DIR"
     mkdir -p "$BACKUP_DIR"
     mkdir -p "$PID_DIR"
@@ -237,7 +239,7 @@ Update `INSTANCE_NAME`, `SERVER_PORT`, `DIRPATH`, `BACKUP_DIR`, and `LOG_DIR` to
 
         # --- STEP 3: START APPLICATION WINDOW ---
         log "Starting Palworld server inside Screen session on port $SERVER_PORT..."
-        /usr/bin/screen -dmS "$INSTANCE_NAME" "$DIRPATH/PalServer.sh" -port="$SERVER_PORT" -publicport="$SERVER_PORT" -useperfthreads -NoAsyncLoadingThread -UseMultithreadForDS -PublicLobby
+        /usr/bin/screen -dmS "$INSTANCE_NAME" "$DIRPATH/PalServer.sh" -port="$SERVER_PORT" -publicport="$SERVER_PORT" -EpicApp=PalServer -useperfthreads -NoAsyncLoadingThread -UseMultithreadForDS -NumberOfWorkerThreadsServer=4 -PublicLobby
 
         sleep 5
 
@@ -304,6 +306,8 @@ Update `API_PASS` to match `AdminPassword`:
 
     PID_DIR="/home/your_username/.run"
     PID_FILE="$PID_DIR/palserver.pid"
+
+    export SCREENDIR="/home/your_username/.screen"
 
     mkdir -p "$LOG_DIR"
 
@@ -461,6 +465,8 @@ Checks Steam for updates, gracefully stops the server, and lets systemd bring it
     IMAGE_URL=""
     DISCORD_FOOTER="Server Maintenance Automation"
 
+    export SCREENDIR="/home/your_username/.screen"
+
     VERSION_FILE="$SERVER_DIR/current_version.txt"
     MANIFEST_FILE="$SERVER_DIR/steamapps/appmanifest_${STEAM_APP_ID}.acf"
     FULL_LOG_PATH="$LOG_DIR/$LOG_FILE"
@@ -597,7 +603,7 @@ Add this line:
 
     sudo nano /etc/systemd/system/PalWorld.service
 
-**Add the following configuration** - replace `your_username` throughout:
+**Add the base configuration first** - replace `your_username` throughout:
 
     [Unit]
     Description=Your Palworld Server Instance
@@ -609,6 +615,7 @@ Add this line:
     [Service]
     Type=forking
     User=your_username
+    Group=your_username
     WorkingDirectory=/home/your_username
     ExecStart=/home/your_username/.scripts/start_server.sh
     ExecStop=/home/your_username/.scripts/stop_server.sh
@@ -620,8 +627,8 @@ Add this line:
     RemainAfterExit=no
     Restart=always
     RestartSec=60
-    StandardOutput=null
-    StandardError=null
+    StandardOutput=journal
+    StandardError=journal
 
     [Install]
     WantedBy=multi-user.target
@@ -639,15 +646,70 @@ Add this line:
 > `RestartSec=60`/`TimeoutStartSec=600` are starting points - tighten once you've measured real timing from your own logs.
 
 > [!Note]
-> `StartLimitIntervalSec=1200`/`StartLimitBurst=3` caps retries to 3 per 20 minutes before marking the unit `failed`. The window must exceed `TimeoutStartSec`, or the safety net never triggers.
+> `StartLimitIntervalSec=1200`/`StartLimitBurst=3` caps retries to 3 per 20 minutes before marking the unit `failed`. The window must exceed `TimeoutStartSec`, or the safety net never triggers - confirmed working in practice (`"Start request repeated too quickly"` in the journal once the limit is hit).
 
-**Enable and Start the Service**
+**Enable and start it, and confirm it's actually working before moving on:**
 
     sudo systemctl daemon-reload
     sudo systemctl enable PalWorld.service
     sudo systemctl start PalWorld.service
     sudo systemctl status PalWorld.service
     cat /home/your_username/.run/palserver.pid
+
+Watch a full cycle - restart and confirm backup, SteamCMD update, and relaunch all complete, not just that the unit shows `active`:
+
+    tail -f /home/your_username/logs/palserver_*.log
+
+--------------------------------------------------------------------------------
+## Recommended: Harden the Service
+
+The base unit above works standalone. This section adds kernel-level sandboxing and locks the operational scripts down from tampering - strongly recommended, and confirmed working together on a live server, but layered on *after* you have a working baseline so there's something simpler to fall back to if anything here needs debugging.
+
+**Lock down the scripts.** They're owned by the same user the game process runs as by default - if that process is ever compromised, it could overwrite its own automation. Run files before directory (the wildcard `*.sh` is expanded by *your own shell* before `sudo` runs, so locking the directory first can revoke your own read access before the wildcard resolves):
+
+    sudo chown root:your_username /home/your_username/.scripts/*.sh
+    sudo chmod 750 /home/your_username/.scripts/*.sh
+    sudo chown root:your_username /home/your_username/.scripts
+    sudo chmod 750 /home/your_username/.scripts
+
+> [!Caution]
+> This prevents tampering, not credential exposure - `your_username` (same account the game runs as) can still read `API_PASS` in plaintext via group access, since the game process needs that same credential to authenticate.
+
+**Add the following lines to `[Service]`** in the unit from above:
+
+    Environment="SCREENDIR=/home/your_username/.screen"
+    ExecStartPre=+/bin/mkdir -p /home/your_username/.screen
+    ExecStartPre=+/bin/chown -R your_username:your_username /home/your_username/.screen
+    ExecStartPre=+/bin/chmod 700 /home/your_username/.screen
+    NoNewPrivileges=true
+    PrivateTmp=true
+    ProtectSystem=strict
+    ProtectHome=read-only
+    ReadWritePaths=/home/your_username/pw_server
+    ReadWritePaths=/home/your_username/.run
+    ReadWritePaths=/home/your_username/.flock
+    ReadWritePaths=-/home/your_username/.screen
+    ReadWritePaths=/home/your_username/logs
+    ReadWritePaths=/home/your_username/backups
+    ReadWritePaths=/home/your_username/.local/share/Steam
+    ReadWritePaths=-/home/your_username/.steam
+
+> [!Important]
+> The `+` prefix on `ExecStartPre=` is required, not optional. Without it, these setup commands run inside the same sandbox as the main process, creating a circular dependency - the sandbox needs `.screen` to exist to bind-mount it, but nothing outside the sandbox exists yet to create it. This produces `status=217/USER` ("Failed to determine user credentials") on a real server, reproducibly. `+` runs the setup fully unsandboxed (as root) before the sandbox or `User=` restriction ever apply, breaking that cycle entirely.
+
+> [!Note]
+> `ProtectHome=read-only` holds correctly once the `+` fix above is in place - confirmed via a real `systemctl status` showing `active (running)` with the actual game binary as the tracked PID. `ProtectSystem=strict` + `ProtectHome=read-only` together mean the *entire* filesystem is read-only to this service except what's explicitly listed in `ReadWritePaths`.
+
+> [!Note]
+> `.local/share/Steam` (no `-` prefix) is SteamCMD's real, confirmed-necessary data directory - its modification time matches live server updates. `.steam` is listed defensively with `-` in case your install uses it as a compatibility path, but isn't the one doing the real work.
+
+**Reload, reset, and confirm the hardened version still starts cleanly:**
+
+    sudo systemctl daemon-reload
+    sudo systemctl reset-failed PalWorld.service
+    sudo systemctl restart PalWorld.service
+    sudo systemctl status PalWorld.service
+    sudo systemd-analyze security PalWorld.service
 
 --------------------------------------------------------------------------------
 # Step 11: Create the Host-Level Maintenance Script (Optional)
@@ -781,6 +843,8 @@ Set:
     sudo systemctl daemon-reload
     sudo systemctl restart ssh.service
 
+![image](https://github.com/user-attachments/assets/f12f25af-807d-4981-9e53-ebe2ab3d2688)
+
 **Restrict `su`:**
 
     sudo groupadd restrictedsu
@@ -790,58 +854,10 @@ Add:
 
     auth       required   pam_wheel.so group=restrictedsu
 
+![image](https://github.com/user-attachments/assets/3d3c941b-aadd-4bdb-b736-e2fb4c7b5c8b)
+
 > [!TIP]
 > For remote triggers (control panels, automation), use a forced-command SSH key restricted to one script instead of a normal login key: `command="/home/your_username/.scripts/start_server.sh",restrict ssh-ed25519 ...` in `authorized_keys`.
-
-## Lock Down the Operational Scripts
-
-`start_server.sh`, `stop_server.sh`, and `update_checker.sh` are owned by the same user the game process runs as by default - if that process is ever compromised, it could overwrite its own automation.
-
-    sudo chown root:your_username /home/your_username/.scripts
-    sudo chmod 750 /home/your_username/.scripts
-    sudo chown root:your_username /home/your_username/.scripts/*.sh
-    sudo chmod 750 /home/your_username/.scripts/*.sh
-
-> [!Important]
-> Lock down both the **directory** and the **files** - directory write access alone lets an attacker delete and recreate a script.
-
-> [!Caution]
-> This prevents tampering, not credential exposure - `your_username` (same account the game runs as) can still read `API_PASS` in plaintext via group access.
-
-## Sandbox the systemd Service
-
-Add under `[Service]` in Step 10's unit:
-
-    Environment="SCREENDIR=/home/your_username/.screen"
-    ExecStartPre=/bin/mkdir -p /home/your_username/.screen
-    ExecStartPre=/bin/chmod 700 /home/your_username/.screen
-    NoNewPrivileges=true
-    PrivateTmp=true
-    ProtectSystem=strict
-    ProtectHome=read-only
-    ReadWritePaths=/home/your_username/pw_server
-    ReadWritePaths=/home/your_username/.run
-    ReadWritePaths=/home/your_username/.flock
-    ReadWritePaths=/home/your_username/.screen
-    ReadWritePaths=/home/your_username/logs
-    ReadWritePaths=/home/your_username/backups
-    ReadWritePaths=/home/your_username/.local/share/Steam
-
-> [!Note]
-> `ExecStartPre=` runs inside the same sandbox as `ExecStart=`, so it can already write to `.screen` via the `ReadWritePaths` entry above - no separate manual `mkdir` step needed, and the directory gets recreated automatically if it's ever deleted.
-
-> [!Caution]
-> Every path the service writes to must be listed, or the write fails silently. `screen`'s socket directory is the most likely thing to break if the `SCREENDIR` override above is skipped - its default location isn't in this sandbox at all.
-
-**Test before trusting this in production:**
-
-    sudo systemctl daemon-reload
-    sudo systemctl restart PalWorld.service
-    tail -f /home/your_username/logs/palserver_*.log
-    sudo systemd-analyze security PalWorld.service
-
-> [!Note]
-> `StandardOutput=null` means `journalctl` shows nothing - use the log file above instead.
 
 --------------------------------------------------------------------------------
 
